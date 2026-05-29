@@ -284,3 +284,15 @@ define Device/zyxel_scr50axe
 		ipq-wifi-zyxel_scr50axe
 endef
 TARGET_DEVICES += zyxel_scr50axe
+
+define Device/tplink_re700x
+	$(call Device/FitImage)
+	DEVICE_VENDOR := TP-Link
+	DEVICE_MODEL := RE700X
+	SOC := ipq5018
+	BLOCKSIZE := 128k
+	PAGESIZE := 2048
+	DEVICE_DTS_CONFIG := config@mp03.3-c2
+	DEVICE_PACKAGES := ath11k-firmware-ipq5018-qcn6122
+endef
+TARGET_DEVICES += tplink_re700x
