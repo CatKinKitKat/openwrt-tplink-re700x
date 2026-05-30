@@ -401,6 +401,12 @@ br_hex=$(cat /sys/class/net/br-lan/address | tr -d ':')
   suspicious because it names GPIO38 while the actual WPS key node names GPIO31.
   The FIT hash is
   `6aefa5f77157821b0b58304cf74c3fd2193c6b46c038b908c3f4c0ab4ac0fd7c`.
+- `re700x-wps-gpio38.itb` is a single-purpose WPS diagnostic: it keeps
+  stock-style `gpio-keys-polled`, moves only the WPS key from GPIO31 to GPIO38,
+  and applies `button_pins` to GPIO25/GPIO38 with pull-up. This tests whether
+  the stock DTB's otherwise-unreferenced `button_pins/wps_button` was the real
+  WPS input. The FIT hash is
+  `9d840a9ca40c17be4050781e3f5ac6465da7619f7bf6dcf66297fc54480f5a7c`.
 
 ## Current DTS Bring-Up Assumptions
 
@@ -425,10 +431,11 @@ br_hex=$(cat /sys/class/net/br-lan/address | tr -d ':')
   compatible is `tplink,re700x`, and the only visually confirmed LED is the
   blue WPS-like LED on GPIO22. The current DTS exposes only this LED.
 - Buttons are currently stock-style polled GPIO keys: reset on GPIO25
-  active-low and WPS on GPIO31 active-low with a 100 ms poll interval.
-- Unlike stock, the current OpenWrt DTS explicitly applies `button_pins` to
-  GPIO25/GPIO31. Stock's keys node does not reference pinctrl, and its separate
-  unreferenced `button_pins` child names GPIO38 as `wps_button`.
+  active-low and WPS on GPIO38 active-low with a 100 ms poll interval for the
+  current GPIO38 diagnostic image. The stock key node itself names GPIO31; this
+  branch state is intentionally a test, not a final mapping.
+- Stock's keys node does not reference pinctrl, and its separate unreferenced
+  `button_pins` child names GPIO38 as `wps_button`.
 - Stock DTB indicates two active radios: internal IPQ5018 on userpd1 and
   QCN6122 on userpd2; a third radio is disabled. The current OpenWrt DTS
   mirrors this as `&wifi` and `&wifi1` only.

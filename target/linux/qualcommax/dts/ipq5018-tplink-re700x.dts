@@ -33,6 +33,8 @@
 	keys {
 		compatible = "gpio-keys-polled";
 		poll-interval = <100>;
+		pinctrl-0 = <&button_pins>;
+		pinctrl-names = "default";
 
 		button-reset {
 			label = "reset";
@@ -42,7 +44,7 @@
 
 		button-wps {
 			label = "wps";
-			gpios = <&tlmm 31 GPIO_ACTIVE_LOW>;
+			gpios = <&tlmm 38 GPIO_ACTIVE_LOW>;
 			linux,code = <KEY_WPS_BUTTON>;
 		};
 	};
@@ -228,7 +230,7 @@
 
 &tlmm {
 	button_pins: button-state {
-		pins = "gpio25", "gpio31";
+		pins = "gpio25", "gpio38";
 		function = "gpio";
 		drive-strength = <8>;
 		bias-pull-up;
