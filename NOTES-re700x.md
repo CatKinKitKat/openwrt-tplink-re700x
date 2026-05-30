@@ -10,16 +10,17 @@ dumps. The ART dump and stock backup files are local recovery inputs only.
 
 - Branch: `tplink-re700x-wip`
 - Boot method: U-Boot/TFTP RAM boot only
-- Current local test image: `/srv/tftp/re700x-qcn-only-mm1.itb`
+- Current validated local test image: `/srv/tftp/re700x-ipq5018-baseline.itb`
 - Kernel starts and reaches userspace on initramfs.
 - SPI-NAND is detected and SMEM/MIBIB partitions are exposed correctly.
 - `factory_data` mounts read-only as UBIFS and provides `default-mac`.
 - Ethernet on the external port works through `lan` at 1000 Mbps full duplex.
 - `br-lan` and `lan` use the 6-byte `default-mac` from `factory_data`.
 - Default network config treats the single external port as DHCP client LAN.
-- Wi-Fi is enabled for RAM-only ath11k testing. Calibration is extracted from
-  `0:art`; device-specific board-2 files are now included from the stock
-  RE700X EU v1.0 rootfs boarddata.
+- IPQ5018 Wi-Fi is enabled for RAM-only ath11k testing. Calibration is
+  extracted from `0:art`; device-specific board-2 files are included from the
+  stock RE700X EU v1.0 rootfs boarddata. QCN6122 remains disabled because all
+  tested PD/memory-mode variants crash Q6 before QCN caldata is requested.
 - No factory or sysupgrade image support is considered ready.
 
 ## Hardware
@@ -96,7 +97,18 @@ tftpboot 0x44000000 openwrt-qualcommax-ipq50xx-tplink_re700x-initramfs-uImage.it
 bootm 0x44000000
 ```
 
-Current local test copy:
+Current validated baseline test copy:
+
+```text
+setenv serverip 192.168.1.248
+setenv ipaddr 192.168.1.50
+tftpboot 0x44000000 re700x-ipq5018-baseline.itb
+bootm 0x44000000
+```
+
+Historical RAM test copies kept for traceability:
+
+Factory data / MAC mount test:
 
 ```text
 setenv serverip 192.168.1.248
@@ -105,7 +117,7 @@ tftpboot 0x44000000 re700x-factorydata.itb
 bootm 0x44000000
 ```
 
-Current Wi-Fi test copy:
+Initial Wi-Fi test:
 
 ```text
 setenv serverip 192.168.1.248
@@ -114,7 +126,7 @@ tftpboot 0x44000000 re700x-wifi-test1.itb
 bootm 0x44000000
 ```
 
-Current board-2 Wi-Fi test copy:
+Board-2 Wi-Fi test:
 
 ```text
 setenv serverip 192.168.1.248
@@ -123,7 +135,7 @@ tftpboot 0x44000000 re700x-board2-test1.itb
 bootm 0x44000000
 ```
 
-Current isolated IPQ5018 Wi-Fi test copy:
+Isolated IPQ5018 Wi-Fi test:
 
 ```text
 setenv serverip 192.168.1.248
@@ -132,7 +144,7 @@ tftpboot 0x44000000 re700x-ipq5018-only-mm1.itb
 bootm 0x44000000
 ```
 
-Current dual-radio memory-mode-1 test copy:
+Dual-radio memory-mode-1 test:
 
 ```text
 setenv serverip 192.168.1.248
@@ -141,7 +153,7 @@ tftpboot 0x44000000 re700x-both-mm1.itb
 bootm 0x44000000
 ```
 
-Current stock-memory dual-radio test copy:
+Stock-memory dual-radio test:
 
 ```text
 setenv serverip 192.168.1.248
@@ -150,12 +162,30 @@ tftpboot 0x44000000 re700x-stockmem-mm1.itb
 bootm 0x44000000
 ```
 
-Current QCN6122-only memory-mode-1 test copy:
+QCN6122-only memory-mode-1 test:
 
 ```text
 setenv serverip 192.168.1.248
 setenv ipaddr 192.168.1.50
 tftpboot 0x44000000 re700x-qcn-only-mm1.itb
+bootm 0x44000000
+```
+
+QCN6122-only memory-mode-2 test:
+
+```text
+setenv serverip 192.168.1.248
+setenv ipaddr 192.168.1.50
+tftpboot 0x44000000 re700x-qcn-only-mm2.itb
+bootm 0x44000000
+```
+
+QCN6122 PD3/default-mapping test:
+
+```text
+setenv serverip 192.168.1.248
+setenv ipaddr 192.168.1.50
+tftpboot 0x44000000 re700x-qcn-pd3-default.itb
 bootm 0x44000000
 ```
 
@@ -322,23 +352,12 @@ br_hex=$(cat /sys/class/net/br-lan/address | tr -d ':')
 
 ## Open Items
 
-- Validate Wi-Fi boot logs from `re700x-board2-test1.itb`.
-- Confirm generated caldata files and ath11k MAC handling without printing
-  real MAC addresses.
-- Validate isolated Wi-Fi boot logs from `re700x-ipq5018-only-mm1.itb`.
-- Validate dual-radio memory-mode-1 boot logs from `re700x-both-mm1.itb`.
-- Validate stock-memory dual-radio boot logs from `re700x-stockmem-mm1.itb`.
-- Check whether moving the QCN6122 BDF/M3 regions avoids the IPQ5018 firmware
-  start timeout.
-- Validate QCN6122-only boot logs from `re700x-qcn-only-mm1.itb`.
-- Validate QCN6122-only memory-mode-2 boot logs from
-  `re700x-qcn-only-mm2.itb`.
-- Validate QCN6122 PD3/default-mapping boot logs from
-  `re700x-qcn-pd3-default.itb`.
 - QCN6122 remains blocked: PD2 mode 1, PD2 mode 2, and PD3 mode 1 all crash Q6
   before QCN caldata is requested.
 - Continue from the validated IPQ5018-only baseline image
   `re700x-ipq5018-baseline.itb`.
+- Test buttons through `gpio_button_hotplug` events.
+- Test LED triggers/brightness manually from `/sys/class/leds`.
 - Decide later whether this target needs factory/sysupgrade image generation.
 - Keep all tests RAM-boot-only until recovery and install paths are fully
   understood.
