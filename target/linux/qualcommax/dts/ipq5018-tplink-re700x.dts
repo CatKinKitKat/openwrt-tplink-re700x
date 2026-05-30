@@ -55,23 +55,22 @@
 		pinctrl-names = "default";
 
 		/*
-		 * Only GPIO22 is visually confirmed. Keep the other stock LED
-		 * GPIOs disabled until the front panel wiring is identified.
+		 * All five front-panel LEDs confirmed by GPIO output sweep:
+		 * power 31, wps-red 32, wps-blue 22, wlan2g 33, wlan5g 34
+		 * (all active-high). The stock DTB LED GPIOs were all wrong.
 		 */
 		led_power: power {
-			gpios = <&tlmm 38 GPIO_ACTIVE_HIGH>;
+			gpios = <&tlmm 31 GPIO_ACTIVE_HIGH>;
 			color = <LED_COLOR_ID_GREEN>;
 			function = LED_FUNCTION_POWER;
-			linux,default-trigger = "heartbeat";
-			status = "disabled";
+			default-state = "on";
 		};
 
 		led_wps_red: wps-red {
-			gpios = <&tlmm 18 GPIO_ACTIVE_HIGH>;
+			gpios = <&tlmm 32 GPIO_ACTIVE_HIGH>;
 			color = <LED_COLOR_ID_RED>;
 			function = LED_FUNCTION_WPS;
 			default-state = "off";
-			status = "disabled";
 		};
 
 		led_wps_blue: wps-blue {
@@ -81,20 +80,18 @@
 			default-state = "off";
 		};
 
-		wlan-2g {
-			gpios = <&tlmm 39 GPIO_ACTIVE_HIGH>;
+		led_wlan2g: wlan-2g {
+			gpios = <&tlmm 33 GPIO_ACTIVE_HIGH>;
 			color = <LED_COLOR_ID_GREEN>;
 			function = "wlan2g";
 			default-state = "off";
-			status = "disabled";
 		};
 
-		wlan-5g {
-			gpios = <&tlmm 13 GPIO_ACTIVE_HIGH>;
+		led_wlan5g: wlan-5g {
+			gpios = <&tlmm 34 GPIO_ACTIVE_HIGH>;
 			color = <LED_COLOR_ID_GREEN>;
 			function = "wlan5g";
 			default-state = "off";
-			status = "disabled";
 		};
 	};
 };
@@ -226,9 +223,12 @@
 	rtl8211f_6: ethernet-phy@6 {
 		compatible = "ethernet-phy-id001c.c916";
 		reg = <6>;
-		reset-assert-us = <200000>;
-		reset-deassert-us = <10000>;
-		reset-gpios = <&tlmm 33 GPIO_ACTIVE_LOW>;
+		/*
+		 * No reset-gpios: the stock DTB claimed gpio33 as the PHY reset,
+		 * but gpio33 is actually the 2.4G LED (confirmed by sweep).
+		 * U-Boot brings up the PHY and the link is stable without a
+		 * Linux-side reset.
+		 */
 	};
 };
 
@@ -241,7 +241,7 @@
 	};
 
 	led_pins: led-state {
-		pins = "gpio22";
+		pins = "gpio22", "gpio31", "gpio32", "gpio33", "gpio34";
 		function = "gpio";
 		drive-strength = <8>;
 		bias-pull-down;
@@ -305,14 +305,28 @@
 };
 
 &wifi1 {
+	/* QCN6122 5G. Use the canonical OpenWrt PD2 memory layout
+	 * (bdf 0x4d100000 / m3-dump 0x4df00000) shared by all working
+	 * IPQ5018+QCN6122 devices. The stock-DTB-derived 0x4d200000 /
+	 * 0x4de00000 overlapped the Q6 SMEM region and crashed Q6 with
+	 * err_smem_ver.2.1.
+	 */
+	/* QCN6122 5GHz is BLOCKED: the userpd firmware stalls in init
+	 * (DOG watchdog -> err_smem_ver) ~40s after spawn, before any QMI
+	 * exchange. Ruled out by testing: custom vs no board-2, stock vs
+	 * canonical bdf/m3 addresses, boot-args PCIE0/GPIO15 and PCIE1/GPIO18,
+	 * and UPD2 vs UPD3. On UPD2 the 2.4G radio survives; on UPD3 even the
+	 * IPQ5018 fails QMI (-110). Next step is to read the QCN init/reset
+	 * sequence from the stock firmware rather than guessing. Keep disabled.
+	 */
 	status = "disabled";
 
 	qcom,rproc = <&q6_wcss_pd2>;
 	qcom,userpd-subsys-name = "q6v5_wcss_userpd2";
 	qcom,ath11k-calibration-variant = "TP-Link-RE700X";
 	qcom,ath11k-fw-memory-mode = <1>;
-	qcom,bdf-addr = <0x4d200000>;
-	qcom,m3-dump-addr = <0x4de00000>;
+	qcom,bdf-addr = <0x4d100000>;
+	qcom,m3-dump-addr = <0x4df00000>;
 
 	ieee80211-freq-limit = <5150000 5730000>;
 };

@@ -67,17 +67,24 @@ the keys node. GPIO31 appears as the WPS `gpios` entry only. This is a real
 stock-DTB inconsistency and should be treated as evidence, not resolved by
 guessing random GPIOs.
 
-LEDs:
+LEDs (all five confirmed empirically by GPIO output sweep, all active-high):
 
-- Power: GPIO38, active high
-- WPS red: GPIO18, active high
-- WPS blue: GPIO22, active high
-- 2G WLAN: GPIO39, active high
-- 5G WLAN: GPIO13, active high
+- Power:    GPIO31 (global 543)
+- WPS red:  GPIO32 (global 544)
+- WPS blue: GPIO22 (global 534)
+- 2G WLAN:  GPIO33 (global 545)
+- 5G WLAN:  GPIO34 (global 546)
 
-Only the blue WPS-like LED on GPIO22 is visually confirmed in OpenWrt. The
-other stock DTB LED GPIOs switch electrically but did not affect visible front
-panel LEDs during RAM-boot testing, so they are disabled in the current DTS.
+The stock DTB LED GPIOs (Power 38, WPS red 18, blue 22, 2G 39, 5G 13) were all
+wrong except blue 22 -- just like the stock button GPIOs. The real LEDs are the
+consecutive group 31-34 plus blue 22. The current DTS enables all five, with
+led_pins = gpio22,31,32,33,34. The stock DTB also wrongly claimed gpio33 as the
+RTL8211F PHY reset; gpio33 is the 2.4G LED, so the rtl8211f node has no
+reset-gpios and Ethernet is stable without a Linux-side reset.
+
+Caveat for future probing: the serial console is on gpio28/29 (NOT gpio31/32).
+Driving gpio28 (global 540) or gpio29 (global 541) as output freezes the live
+connection; gpio4-9 are NAND. These are excluded from the led-sweep tool.
 
 ## Flash Layout from SMEM/MIBIB
 
@@ -494,6 +501,19 @@ br_hex=$(cat /sys/class/net/br-lan/address | tr -d ':')
 
 - QCN6122 remains blocked: PD2 mode 1, PD2 mode 2, and PD3 mode 1 all crash Q6
   before QCN caldata is requested.
+- QCN6122 deep-dive (2026-05-30, still blocked). Crash is err_smem_ver.2.1 /
+  "USER-PD DOG detects stalled initialization" (process wlan1), ~40s after the
+  userpd spawns and before any QMI/caldata exchange -> board-2 and caldata are
+  not the trigger. Ruled out (all identical ~52s DOG on PD2): custom board-2
+  present vs removed; bdf/m3 0x4d200000/0x4de00000 vs canonical 0x4d100000/
+  0x4df00000; boot-args PCIE0/GPIO15 vs PCIE1/GPIO18 (identical -> reset GPIO is
+  not the lever, and both stock PCIe controllers are disabled so QCN6122 is
+  AHB-integrated). Replicating gl-b3000 (wifi1 on UPD3, no boot-args) was worse:
+  IPQ5018 then fails QMI (-110) with no phy at all; on UPD2 the 2.4G radio still
+  works. Only tplink_re700x shipped a custom ipq-wifi board file (now removed);
+  upstream provides no board-2, devices use caldata (QCN at 0:art 0x26800). Next
+  real step: capture the QCN6122 init/reset/clock sequence under stock firmware,
+  or wait for upstream 5GHz support. Do not keep guessing DTS values.
 - Continue from the validated RAM-boot baseline image
   `re700x-ramboot-baseline.itb`.
 - Continue LED work cautiously: keep GPIO22 as confirmed, do not test GPIO29
