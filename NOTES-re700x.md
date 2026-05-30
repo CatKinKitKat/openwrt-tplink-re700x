@@ -264,6 +264,18 @@ br_hex=$(cat /sys/class/net/br-lan/address | tr -d ':')
   IPQ5018 devices, and the `b00b040` QCN6122 caldata hotplug case is added for
   `tplink,re700x`. The FIT hash is
   `ac6df20f57cfefebcc6250b5b4ea557f6992492d5922e3c80df69f6ecd167b9c`.
+- Runtime test with `re700x-qcn-pd3-default.itb`: PD3 also fails with the same
+  Q6 watchdog pattern. The log shows `b00b040.wifi`, userpd 3, and
+  `FW memory mode: 1`; then Q6 reports fatal `err_smem_ver.2.1` from process
+  `wlan2`/`TIMER_CLIENT_3`, followed by remoteproc recovery timeout. This rules
+  out a simple PD2-vs-PD3 mapping mistake as the primary QCN6122 blocker.
+- Current baseline after the QCN isolation tests is IPQ5018-only Wi-Fi: the
+  internal IPQ5018 radio is enabled with firmware memory mode 1, while QCN6122
+  remains disabled. This preserves the known-good RAM-boot and Ethernet state
+  and avoids repeated Q6 crashes during normal bring-up tests.
+- `re700x-ipq5018-baseline.itb` is the restored IPQ5018-only RAM-boot baseline
+  after QCN isolation testing. The FIT hash is
+  `1f8d9d3d9e6f7396518eb69ccdc5c40f2eb649b4b51d0cab88ef68ddbcf53d70`.
 
 ## Current DTS Bring-Up Assumptions
 
@@ -309,8 +321,10 @@ br_hex=$(cat /sys/class/net/br-lan/address | tr -d ':')
   `re700x-qcn-only-mm2.itb`.
 - Validate QCN6122 PD3/default-mapping boot logs from
   `re700x-qcn-pd3-default.itb`.
-- Check whether QCN6122 can boot at all when the internal IPQ5018 ath11k node
-  is disabled and which firmware memory mode it requires.
+- QCN6122 remains blocked: PD2 mode 1, PD2 mode 2, and PD3 mode 1 all crash Q6
+  before QCN caldata is requested.
+- Validate the restored IPQ5018-only baseline image
+  `re700x-ipq5018-baseline.itb`.
 - Decide later whether this target needs factory/sysupgrade image generation.
 - Keep all tests RAM-boot-only until recovery and install paths are fully
   understood.
