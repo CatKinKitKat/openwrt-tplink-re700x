@@ -190,6 +190,7 @@
 	status = "okay";
 
 	label = "lan";
+	phy-handle = <&qca8081_6>;
 	nvmem-cells = <&macaddr_appsblenv_ethaddr 0>;
 	nvmem-cell-names = "mac-address";
 };
@@ -209,7 +210,8 @@
 	pinctrl-names = "default";
 	reset-gpios = <&tlmm 33 GPIO_ACTIVE_HIGH>;
 
-	ethernet-phy@6 {
+	qca8081_6: ethernet-phy@6 {
+		compatible = "ethernet-phy-id004d.d101";
 		reg = <6>;
 	};
 };
