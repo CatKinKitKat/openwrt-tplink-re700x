@@ -54,6 +54,10 @@
 		pinctrl-0 = <&led_pins>;
 		pinctrl-names = "default";
 
+		/*
+		 * Only GPIO22 is visually confirmed. Keep the other stock LED
+		 * GPIOs disabled until the front panel wiring is identified.
+		 */
 		led_power: power {
 			gpios = <&tlmm 38 GPIO_ACTIVE_HIGH>;
 			color = <LED_COLOR_ID_GREEN>;

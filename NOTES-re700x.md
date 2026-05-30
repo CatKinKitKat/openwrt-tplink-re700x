@@ -10,8 +10,8 @@ dumps. The ART dump and stock backup files are local recovery inputs only.
 
 - Branch: `tplink-re700x-wip`
 - Boot method: U-Boot/TFTP RAM boot only
-- Current validated local test image: `/srv/tftp/re700x-ipq5018-baseline.itb`
-- Current button diagnostic image: `/srv/tftp/re700x-keys-polled.itb`
+- Current validated local test image: `/srv/tftp/re700x-ramboot-baseline.itb`
+  (`5749ed6b920be18737c406c758907c1c65613fdd8b6509090b1c200154750591`)
 - Kernel starts and reaches userspace on initramfs.
 - SPI-NAND is detected and SMEM/MIBIB partitions are exposed correctly.
 - `factory_data` mounts read-only as UBIFS and provides `default-mac`.
@@ -52,15 +52,13 @@ dumps. The ART dump and stock backup files are local recovery inputs only.
 
 Buttons:
 
-- Reset: GPIO25, active low
-- WPS: GPIO31, active low
+- Reset: GPIO19, active low, confirmed by GPIO level diff and hotplug event
+- WPS: GPIO20, active low, confirmed by GPIO level diff and hotplug event
 
 The stock DTB describes buttons with `gpio-keys-polled` and
-`poll-interval = <100>`. Stock userspace `gpiod` does not appear to hard-code a
-separate hidden button GPIO; static analysis of the stock rootfs shows the
-kernel hotplug path is still used and TP-Link userspace consumes generated
-button state files/events. The current OpenWrt DTS therefore uses
-`gpio-keys-polled` for the next RAM-only button test.
+`poll-interval = <100>`, but its listed GPIOs did not match runtime behavior on
+this unit. The current OpenWrt DTS uses `gpio-keys-polled` with the runtime
+confirmed GPIO19/GPIO20 mapping.
 
 Stock DTB caveat: the `gpio-keys-polled` node itself has no `pinctrl-0`
 reference in the decompiled DTB. A separate `button_pins` node exists, but it
@@ -452,9 +450,9 @@ br_hex=$(cat /sys/class/net/br-lan/address | tr -d ':')
 - Runtime validation: `/proc/mtd` exposes all 16 SMEM partitions, device-tree
   compatible is `tplink,re700x`, and the only visually confirmed LED is the
   blue WPS-like LED on GPIO22. The current DTS exposes only this LED.
-- Buttons are currently stock-style polled GPIO keys: reset on GPIO25
-  active-low and WPS on GPIO20 active-low. GPIO20 is confirmed by both a
-  before/after GPIO level diff and a runtime hotplug event.
+- Buttons are currently polled GPIO keys: reset on GPIO19 active-low and WPS on
+  GPIO20 active-low. Both are confirmed by before/after GPIO level diffs and
+  runtime hotplug events.
 - Stock's keys node does not reference pinctrl, and its separate unreferenced
   `button_pins` child names GPIO38 as `wps_button`.
 - Runtime testing did not confirm WPS events on GPIO31 or GPIO38 with the
@@ -496,12 +494,8 @@ br_hex=$(cat /sys/class/net/br-lan/address | tr -d ':')
 
 - QCN6122 remains blocked: PD2 mode 1, PD2 mode 2, and PD3 mode 1 all crash Q6
   before QCN caldata is requested.
-- Continue from the validated IPQ5018-only baseline image
-  `re700x-ipq5018-baseline.itb`.
-- WPS still has no observed event with stock-style `gpio-keys-polled`.
-  Current controlled tests compare stock-exact pinctrl behavior first, then a
-  single-purpose GPIO38-as-WPS diagnostic because stock's unreferenced
-  `button_pins/wps_button` names GPIO38.
+- Continue from the validated RAM-boot baseline image
+  `re700x-ramboot-baseline.itb`.
 - Continue LED work cautiously: keep GPIO22 as confirmed, do not test GPIO29
   again, and keep the other stock LED GPIOs disabled until the real front panel
   wiring is identified.
