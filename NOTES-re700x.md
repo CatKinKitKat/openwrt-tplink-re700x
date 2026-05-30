@@ -338,6 +338,9 @@ br_hex=$(cat /sys/class/net/br-lan/address | tr -d ':')
   switch electrically between low and high but caused no visible front-panel
   LED change. These four nodes are therefore disabled until the real front LED
   wiring is identified.
+- RAM-boot test with `re700x-ledsafe.itb` confirms that disabling the
+  unvalidated LED child nodes is effective: `/sys/class/leds` only exposes the
+  confirmed `blue:wps` LED.
 
 ## Current DTS Bring-Up Assumptions
 
@@ -360,7 +363,7 @@ br_hex=$(cat /sys/class/net/br-lan/address | tr -d ':')
   both `lan` and `br-lan`, and obtains a DHCP lease from the upstream router.
 - Runtime validation: `/proc/mtd` exposes all 16 SMEM partitions, device-tree
   compatible is `tplink,re700x`, and the only visually confirmed LED is the
-  blue WPS-like LED on GPIO22.
+  blue WPS-like LED on GPIO22. The current DTS exposes only this LED.
 - Stock DTB indicates two active radios: internal IPQ5018 on userpd1 and
   QCN6122 on userpd2; a third radio is disabled. The current OpenWrt DTS
   mirrors this as `&wifi` and `&wifi1` only.
@@ -376,8 +379,8 @@ br_hex=$(cat /sys/class/net/br-lan/address | tr -d ':')
   `re700x-ipq5018-baseline.itb`.
 - Test buttons through `gpio_button_hotplug` events.
 - Continue LED work cautiously: keep GPIO22 as confirmed, do not test GPIO29
-  again, and do not assume the stock LED GPIO list fully maps the visible front
-  panel LEDs.
+  again, and keep the other stock LED GPIOs disabled until the real front panel
+  wiring is identified.
 - Decide later whether this target needs factory/sysupgrade image generation.
 - Keep all tests RAM-boot-only until recovery and install paths are fully
   understood.
