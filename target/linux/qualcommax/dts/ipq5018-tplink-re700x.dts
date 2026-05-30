@@ -101,9 +101,6 @@
 
 &blsp1_uart1 {
 	status = "okay";
-
-	pinctrl-0 = <&serial_0_pins>;
-	pinctrl-names = "default";
 };
 
 &crypto {
@@ -271,11 +268,6 @@
 		};
 	};
 
-	serial_0_pins: uart0-state {
-		pins = "gpio20", "gpio21";
-		function = "blsp0_uart0";
-		bias-disable;
-	};
 };
 
 &q6v5_wcss {
