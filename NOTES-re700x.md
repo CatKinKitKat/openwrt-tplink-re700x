@@ -246,6 +246,14 @@ br_hex=$(cat /sys/class/net/br-lan/address | tr -d ':')
 - `re700x-qcn-only-mm1.itb` disables the internal IPQ5018 radio and keeps
   QCN6122 on PD2 with memory mode 1 and stock-derived memory hints. The FIT
   hash is `60d34394c6e22fa799211f788d780076cc5302676898c100ce6b00c88584b8c2`.
+- Runtime test with `re700x-qcn-only-mm1.itb`: QCN6122 probes on PD2 and Q6
+  starts, but QCN6122 caldata is not generated and Q6 later reports a fatal
+  `err_smem_ver.2.1` crash from process `wlan1`. The remoteproc recovery then
+  times out. `iw dev` remains empty and `wifi status` is empty.
+- `re700x-qcn-only-mm2.itb` keeps the same QCN6122-only setup but changes only
+  QCN6122 firmware memory mode from 1 to 2, matching the stock DTB's wireless
+  memory-mode hint more closely. The FIT hash is
+  `4357319d2dae990d192f5cbeb51057a7c0f932353f59182d30d0aa2f52c7969d`.
 
 ## Current DTS Bring-Up Assumptions
 
@@ -287,8 +295,10 @@ br_hex=$(cat /sys/class/net/br-lan/address | tr -d ':')
 - Check whether moving the QCN6122 BDF/M3 regions avoids the IPQ5018 firmware
   start timeout.
 - Validate QCN6122-only boot logs from `re700x-qcn-only-mm1.itb`.
+- Validate QCN6122-only memory-mode-2 boot logs from
+  `re700x-qcn-only-mm2.itb`.
 - Check whether QCN6122 can boot at all when the internal IPQ5018 ath11k node
-  is disabled.
+  is disabled and which firmware memory mode it requires.
 - Decide later whether this target needs factory/sysupgrade image generation.
 - Keep all tests RAM-boot-only until recovery and install paths are fully
   understood.
