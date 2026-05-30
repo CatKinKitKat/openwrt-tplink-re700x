@@ -11,6 +11,7 @@ dumps. The ART dump and stock backup files are local recovery inputs only.
 - Branch: `tplink-re700x-wip`
 - Boot method: U-Boot/TFTP RAM boot only
 - Current validated local test image: `/srv/tftp/re700x-ipq5018-baseline.itb`
+- Current button diagnostic image: `/srv/tftp/re700x-keys-polled.itb`
 - Kernel starts and reaches userspace on initramfs.
 - SPI-NAND is detected and SMEM/MIBIB partitions are exposed correctly.
 - `factory_data` mounts read-only as UBIFS and provides `default-mac`.
@@ -53,6 +54,13 @@ Buttons:
 
 - Reset: GPIO25, active low
 - WPS: GPIO31, active low
+
+The stock DTB describes buttons with `gpio-keys-polled` and
+`poll-interval = <100>`. Stock userspace `gpiod` does not appear to hard-code a
+separate hidden button GPIO; static analysis of the stock rootfs shows the
+kernel hotplug path is still used and TP-Link userspace consumes generated
+button state files/events. The current OpenWrt DTS therefore uses
+`gpio-keys-polled` for the next RAM-only button test.
 
 LEDs:
 
@@ -190,6 +198,15 @@ QCN6122 PD3/default-mapping test:
 setenv serverip 192.168.1.248
 setenv ipaddr 192.168.1.50
 tftpboot 0x44000000 re700x-qcn-pd3-default.itb
+bootm 0x44000000
+```
+
+Button polling diagnostic test:
+
+```text
+setenv serverip 192.168.1.248
+setenv ipaddr 192.168.1.50
+tftpboot 0x44000000 re700x-keys-polled.itb
 bootm 0x44000000
 ```
 
@@ -341,6 +358,17 @@ br_hex=$(cat /sys/class/net/br-lan/address | tr -d ':')
 - RAM-boot test with `re700x-ledsafe.itb` confirms that disabling the
   unvalidated LED child nodes is effective: `/sys/class/leds` only exposes the
   confirmed `blue:wps` LED.
+- Stock rootfs/static analysis: `/usr/bin/gpiod` opens `/dev/gpio` for GPIO
+  ioctl access, but WPS/reset handling ultimately consumes `/var/run/btn_wps`,
+  `/var/run/btn_reset`, `/tmp/button_wps_check`, and
+  `/tmp/button_reset_check`. The stock kernel module
+  `gpio-button-hotplug.ko` supports both `gpio-keys` and `gpio-keys-polled`.
+  This points back to the DT/kernel button path rather than a separate
+  userspace-only button pin map.
+- `re700x-keys-polled.itb` changes only the OpenWrt `keys` node from
+  `gpio-keys` to stock-style `gpio-keys-polled` with `poll-interval = <100>`.
+  The FIT hash is
+  `101fa11e2c654c7ea086ec7a264bddccc4e383f71b8a9c8ecc3de2015fe600fd`.
 
 ## Current DTS Bring-Up Assumptions
 
@@ -364,6 +392,8 @@ br_hex=$(cat /sys/class/net/br-lan/address | tr -d ':')
 - Runtime validation: `/proc/mtd` exposes all 16 SMEM partitions, device-tree
   compatible is `tplink,re700x`, and the only visually confirmed LED is the
   blue WPS-like LED on GPIO22. The current DTS exposes only this LED.
+- Buttons are currently stock-style polled GPIO keys: reset on GPIO25
+  active-low and WPS on GPIO31 active-low with a 100 ms poll interval.
 - Stock DTB indicates two active radios: internal IPQ5018 on userpd1 and
   QCN6122 on userpd2; a third radio is disabled. The current OpenWrt DTS
   mirrors this as `&wifi` and `&wifi1` only.
@@ -377,7 +407,9 @@ br_hex=$(cat /sys/class/net/br-lan/address | tr -d ':')
   before QCN caldata is requested.
 - Continue from the validated IPQ5018-only baseline image
   `re700x-ipq5018-baseline.itb`.
-- Test buttons through `gpio_button_hotplug` events.
+- Test `re700x-keys-polled.itb` for WPS/reset button events. If GPIO31 still
+  never changes under polling, capture more evidence from stock firmware or
+  board-level GPIO routing before guessing more pins.
 - Continue LED work cautiously: keep GPIO22 as confirmed, do not test GPIO29
   again, and keep the other stock LED GPIOs disabled until the real front panel
   wiring is identified.
