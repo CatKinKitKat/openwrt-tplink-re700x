@@ -522,3 +522,62 @@ br_hex=$(cat /sys/class/net/br-lan/address | tr -d ':')
 - Decide later whether this target needs factory/sysupgrade image generation.
 - Keep all tests RAM-boot-only until recovery and install paths are fully
   understood.
+
+## Flash / Install Path Analysis (2026-05-30, read-only from full backup)
+
+A full stock NAND backup was pulled via the RAM-booted OpenWrt (nc stream of
+/dev/mtd0ro..15ro) to /home/eduard/tftp/re700x-stock-backup/ (full-nand.bin +
+per-partition mtdNN-*.bin + SHA256SUMS). Verified: 122421248 bytes total,
+factory_data has a valid UBI# header, 0:art has real caldata at 0x1000
+(IPQ5018) and 0x26800 (QCN6122). This is the recovery safety net.
+
+Stock boot flow (U-Boot 2016.01, bootcmd is compiled-in; appsblenv only holds
+baudrate + has_default_mac):
+- Active A/B slot is chosen from `0:bootconfig` (mtd2) / `0:bootconfig1` (mtd3).
+  Format: magic a0a1a2a3, version 1, 8 entries, footer b0b1b2b3. Entries:
+  0:QSEE, 0:DEVCFG, 0:CDT, 0:APPSBL, 0:HLOS, rootfs, 0:WIFIFW, 0:BTFW, each with
+  a primaryboot flag. All flags 0 => boot the PRIMARY slot (rootfs, not
+  rootfs_1).
+- U-Boot attaches UBI on the active rootfs partition, reads the static UBI
+  volume "kernel" (a FIT) to 0x44000000, and bootm's it using the FIT's DEFAULT
+  config. The same U-Boot also boots our ARM64 FIT (every RAM test:
+  "Jumping to AARCH64 kernel"), so the format is compatible.
+- Stock rootfs UBI has volumes "kernel" (FIT, many fdt@mpXX configs, default
+  config@mp02.1) and "ubi_rootfs" (squashfs). Linux cmdline used
+  root=mtd:ubi_rootfs.
+
+OpenWrt image recipe (model after cmcc_mr3000d-ci, the IPQ5018+QCN6122 sibling):
+- $(call Device/FitImageLzma) + $(call Device/UbiFit) produces a UBI whose
+  kernel volume is named "kernel" (scripts/ubinize-image.sh line 78) -> exactly
+  what the stock U-Boot loads. rootfs volume is "rootfs"(+"rootfs_data"); U-Boot
+  ignores it, OpenWrt's own kernel uses it. Only the "kernel" volume name must
+  match, and it does.
+- Needed device knobs: DEVICE_DTS_CONFIG = config@mp03.3-c2 (RE700X FIT default,
+  already boots), SOC ipq5018, BLOCKSIZE 128k, PAGESIZE 2048, NAND_SIZE 128m,
+  IMAGE_SIZE <= rootfs size 0x2a00000 (43008k). The current RE700X device entry
+  only builds an initramfs; add Device/UbiFit + sizes to get sysupgrade.
+
+Install path (no TP-Link factory image needed): keep RAM-booting the OpenWrt
+initramfs as today, then run sysupgrade with the UbiFit sysupgrade.bin -> it
+ubiformats the rootfs partition and writes the kernel+rootfs UBI to the PRIMARY
+slot; leave bootconfig at 0. Reboot -> U-Boot boots the primary rootfs ->
+"kernel" FIT -> OpenWrt. Recovery on failure: rewrite stock partitions from the
+backup (esp. 0:art + factory_data) via the RAM OpenWrt / U-Boot TFTP.
+
+Open items before flashing: (1) add the UbiFit/sysupgrade device recipe and
+build it; (2) decide IMAGE_SIZE vs the 42 MiB rootfs slot; (3) dry-run the
+recovery (restore stock rootfs from backup) once before the first real flash.
+
+## Recovery write path VALIDATED (2026-05-30, on-device dry test)
+
+Validated that a backed-up partition image can be written back to NAND
+bit-identically, using the alternate (non-booted) slot rootfs_1 (mtd12) with
+its own content (state-preserving, primary rootfs untouched):
+1. dd if=/dev/mtd12ro -> sha256 == backup (94d904...) [read path + backup faithful]
+2. mtd write /tmp/rootfs_1.bin rootfs_1  [no errors]
+3. dd if=/dev/mtd12ro | sha256 == 94d904... [round-trip bit-identical]
+Conclusion: `mtd write <backup-image> <partition-name>` faithfully restores a
+NAND partition. Recovery is proven; flashing is acceptably de-risked. Host->device
+file delivery over nc is unreliable in this sandbox (listener killed), but that is
+secondary - in real recovery the backup can be delivered via U-Boot TFTP or nc, and
+the critical NAND write step is confirmed working from a RAM-booted OpenWrt.

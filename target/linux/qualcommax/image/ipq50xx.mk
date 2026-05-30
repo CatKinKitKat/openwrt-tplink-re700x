@@ -287,6 +287,7 @@ TARGET_DEVICES += zyxel_scr50axe
 
 define Device/tplink_re700x
 	$(call Device/FitImage)
+	$(call Device/UbiFit)
 	DEVICE_VENDOR := TP-Link
 	DEVICE_MODEL := RE700X
 	DEVICE_VARIANT := v1
@@ -294,9 +295,9 @@ define Device/tplink_re700x
 	DEVICE_DTS := ipq5018-tplink-re700x
 	BLOCKSIZE := 128k
 	PAGESIZE := 2048
+	IMAGE_SIZE := 43008k
 	NAND_SIZE := 128m
-	DEVICE_DTS_CONFIG := config@mp03.3-c2
-	IMAGES :=
+	DEVICE_DTS_CONFIG := config@mp02.1
 	DEVICE_PACKAGES := ath11k-firmware-ipq5018-qcn6122 \
 		ethtool ipq-wifi-tplink_re700x kmod-phy-realtek
 endef
