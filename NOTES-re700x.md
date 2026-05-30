@@ -320,6 +320,14 @@ br_hex=$(cat /sys/class/net/br-lan/address | tr -d ':')
   obtains a DHCP lease on `lan` through `br-lan`; the only observed Wi-Fi
   userspace warning is `command failed: Not supported (-95)` during antenna
   configuration, after which `radio0` remains up.
+- LED GPIO runtime tests are incomplete. A temporary diagnostic image,
+  `re700x-leddiag-freegpio.itb`, disabled the `gpio-leds` node only to free
+  the lines for RAM-only probing. GPIO22/global 534 was confirmed as a visible
+  blue LED, second from the top, active-high (`1` on, `0` off), likely WPS
+  blue. GPIO29/global 541 must not be tested further: driving it as GPIO caused
+  the live shell/network connection to drop. GPIO46 could be switched as normal
+  GPIO but did not affect visible LEDs. Other tested free GPIO candidates did
+  not visibly control Power, 2.4G, 5G, or red WPS.
 
 ## Current DTS Bring-Up Assumptions
 
@@ -357,7 +365,9 @@ br_hex=$(cat /sys/class/net/br-lan/address | tr -d ':')
 - Continue from the validated IPQ5018-only baseline image
   `re700x-ipq5018-baseline.itb`.
 - Test buttons through `gpio_button_hotplug` events.
-- Test LED triggers/brightness manually from `/sys/class/leds`.
+- Continue LED work cautiously: keep GPIO22 as confirmed, do not test GPIO29
+  again, and do not assume the stock LED GPIO list fully maps the visible front
+  panel LEDs.
 - Decide later whether this target needs factory/sysupgrade image generation.
 - Keep all tests RAM-boot-only until recovery and install paths are fully
   understood.

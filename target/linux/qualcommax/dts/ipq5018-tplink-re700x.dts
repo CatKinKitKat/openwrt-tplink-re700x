@@ -52,7 +52,6 @@
 		compatible = "gpio-leds";
 		pinctrl-0 = <&led_pins>;
 		pinctrl-names = "default";
-		status = "disabled";
 
 		led_power: power {
 			gpios = <&tlmm 38 GPIO_ACTIVE_HIGH>;
