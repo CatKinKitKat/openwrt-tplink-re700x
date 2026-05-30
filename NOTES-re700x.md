@@ -407,6 +407,15 @@ br_hex=$(cat /sys/class/net/br-lan/address | tr -d ':')
   the stock DTB's otherwise-unreferenced `button_pins/wps_button` was the real
   WPS input. The FIT hash is
   `9d840a9ca40c17be4050781e3f5ac6465da7619f7bf6dcf66297fc54480f5a7c`.
+- Runtime test with `re700x-wps-gpio38.itb`: pressing WPS still produces no
+  `/tmp/button-test.log` entry and `logread` only reports the
+  `gpio_button_hotplug` module load. GPIO38 is therefore not confirmed through
+  stock-style polling.
+- `re700x-wps-gpio38-irq.itb` keeps WPS on GPIO38 but changes the keys node
+  from `gpio-keys-polled` to `gpio-keys`, matching the WN-DAX3000GR style for
+  GPIO38/WPS. This isolates polling vs interrupt-style key handling. The FIT
+  hash is
+  `e86b1eab67381b99f1ab42ed53810e9eaf4d3f1416ccfa6fbe6e1eed4c927b84`.
 
 ## Current DTS Bring-Up Assumptions
 
@@ -431,8 +440,8 @@ br_hex=$(cat /sys/class/net/br-lan/address | tr -d ':')
   compatible is `tplink,re700x`, and the only visually confirmed LED is the
   blue WPS-like LED on GPIO22. The current DTS exposes only this LED.
 - Buttons are currently stock-style polled GPIO keys: reset on GPIO25
-  active-low and WPS on GPIO38 active-low with a 100 ms poll interval for the
-  current GPIO38 diagnostic image. The stock key node itself names GPIO31; this
+  active-low and WPS on GPIO38 active-low for the current WN-DAX3000GR-style
+  `gpio-keys` diagnostic image. The stock key node itself names GPIO31; this
   branch state is intentionally a test, not a final mapping.
 - Stock's keys node does not reference pinctrl, and its separate unreferenced
   `button_pins` child names GPIO38 as `wps_button`.
