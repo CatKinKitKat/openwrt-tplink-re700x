@@ -581,3 +581,43 @@ NAND partition. Recovery is proven; flashing is acceptably de-risked. Host->devi
 file delivery over nc is unreliable in this sandbox (listener killed), but that is
 secondary - in real recovery the backup can be delivered via U-Boot TFTP or nc, and
 the critical NAND write step is confirmed working from a RAM-booted OpenWrt.
+
+## FLASHED + booting OpenWrt from NAND (2026-05-30)
+
+The port now installs and boots from flash. Three fixes were needed beyond the
+RAM-boot baseline:
+
+1. DEVICE_DTS_CONFIG = config@mp02.1 (not config@mp03.3-c2). The stock TP-Link
+   U-Boot reads the "kernel" UBI volume FIT and selects the config *by name*
+   "config@mp02.1"; a different name -> "Config not available" -> U-Boot falls
+   back to the stock rootfs slot.
+2. platform.sh tplink,re700x case: CI_UBIPART=rootfs (the device's UBI part is
+   "rootfs", not the default "firmware") + remove_oem_ubi_volume ubi_rootfs.
+3. CONFIG_CMDLINE_FORCE: the stock U-Boot force-overrides the FIT bootargs with
+   "ubi.mtd=rootfs root=mtd:ubi_rootfs", which mainline cannot satisfy (our UBI
+   rootfs volume is "rootfs", mounted as /dev/ubiblock0_1 via preinit, not via
+   a kernel root=mtd:). Forcing the cmdline makes the kernel ignore U-Boot's and
+   mount /dev/ubiblock0_1. NOTE: CONFIG_CMDLINE_FORCE is target-global (ok for a
+   single-device build, not upstream-clean).
+
+Working from flash: NAND boot, ethernet, 5 LEDs, buttons.
+
+## 2.4G Wi-Fi WORKS (IPQ5018) - the QCN "block" was partly coherent_pool
+
+The forced cmdline initially dropped the DTS chosen "coherent_pool=2M", which
+caused ath11k remoteproc firmware load to fail with "DMA pool exhausted for
+pd-1" (qcom_mdt_load dma_alloc, ~264 KiB seg) -> -12, no phy. Adding
+coherent_pool=4M to the forced cmdline fixed it: the IPQ5018 2.4G radio comes
+fully up (phy0, 802.11ax HE20, WPA-PSK AP verified, 2.4G LED netdev trigger
+works). The earlier "ath11k blocked" conclusion was wrong for 2.4G - it was the
+DMA pool, not a fundamental block.
+
+## 5G / QCN6122 still BLOCKED - re-test with coherent_pool=8M (2026-05-30)
+
+Re-enabled &wifi1 with coherent_pool=8M to see if the 5G block was also just the
+pool. Result: pd-2 now boots (DMA exhaustion gone), but the QCN userpd still
+stalls in init -> "err_smem_ver.2.1 ... USER-PD DOG detects stalled
+initialization" ~40s in. Worse, this crash takes down the cd00000 Q6 root PD,
+which makes the (previously working) 2.4G radio fail QMI with -110, and
+"Coldboot Calibration timed out". So the QCN6122 block is NOT the DMA pool; it
+needs the stock init/reset sequence. Left &wifi1 status=disabled; 2.4G stays up.

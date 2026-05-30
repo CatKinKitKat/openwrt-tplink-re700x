@@ -317,7 +317,15 @@
 	 * canonical bdf/m3 addresses, boot-args PCIE0/GPIO15 and PCIE1/GPIO18,
 	 * and UPD2 vs UPD3. On UPD2 the 2.4G radio survives; on UPD3 even the
 	 * IPQ5018 fails QMI (-110). Next step is to read the QCN init/reset
-	 * sequence from the stock firmware rather than guessing. Keep disabled.
+	 * sequence from the stock firmware rather than guessing.
+	 *
+	 * RE-TEST with coherent_pool=8M: pd-2 now boots (the DMA pool
+	 * exhaustion that had blocked the IPQ5018 2.4G radio is gone), but the
+	 * QCN userpd still stalls in init -> DOG watchdog err_smem_ver.2.1
+	 * ~40s in, which then crashes the cd00000 root PD and takes the working
+	 * 2.4G radio down with it (QMI -110), plus "Coldboot Calibration timed
+	 * out". So the block is NOT the DMA pool; the QCN needs its stock
+	 * init/reset sequence. Keep disabled.
 	 */
 	status = "disabled";
 
