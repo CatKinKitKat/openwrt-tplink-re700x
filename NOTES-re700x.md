@@ -420,6 +420,11 @@ br_hex=$(cat /sys/class/net/br-lan/address | tr -d ':')
   no `/tmp/button-test.log` entry and `logread` only reports the
   `gpio_button_hotplug` module load. GPIO38 is therefore not confirmed as WPS
   through either `gpio-keys-polled` or `gpio-keys`.
+- Direct runtime level check with `re700x-wps-gpio38-irq.itb`: while pressing
+  WPS, GPIO38 stays `in high func0 8mA pull up`. GPIO38 is therefore also
+  electrically not observed as the WPS button line in this setup. GPIO31 is not
+  useful in this particular image because it is no longer claimed by the key
+  node and shows as `out high`.
 
 ## Current DTS Bring-Up Assumptions
 
@@ -452,6 +457,11 @@ br_hex=$(cat /sys/class/net/br-lan/address | tr -d ':')
 - Runtime testing did not confirm WPS events on GPIO31 or GPIO38 with the
   normal OpenWrt key paths. Further work should inspect stock userspace/kernel
   behavior before testing additional pins.
+- Stock rootfs additionally loads `button-hotplug.ko` and runs `/usr/bin/gpiod`
+  against `/dev/gpio`. `gpiod` contains explicit button-check paths for reset,
+  WPS, LED switch, and power, and writes `/tmp/button_wps_check` /
+  `/tmp/button_reset_check`; this may be separate from the normal DT
+  `gpio-keys` hotplug path.
 - Stock DTB indicates two active radios: internal IPQ5018 on userpd1 and
   QCN6122 on userpd2; a third radio is disabled. The current OpenWrt DTS
   mirrors this as `&wifi` and `&wifi1` only.
