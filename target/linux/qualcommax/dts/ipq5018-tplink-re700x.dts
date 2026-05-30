@@ -194,9 +194,10 @@
 	status = "okay";
 
 	label = "lan";
-	phy-handle = <&qca8081_6>;
+	phy-handle = <&rtl8211f_6>;
 	nvmem-cells = <&macaddr_appsblenv_ethaddr 0>;
 	nvmem-cell-names = "mac-address";
+	phy-mode = "sgmii";
 };
 
 &mdio0 {
@@ -213,8 +214,8 @@
 	pinctrl-0 = <&mdio1_pins>;
 	pinctrl-names = "default";
 
-	qca8081_6: ethernet-phy@6 {
-		compatible = "ethernet-phy-id004d.d101";
+	rtl8211f_6: ethernet-phy@6 {
+		compatible = "ethernet-phy-id001c.c916";
 		reg = <6>;
 		reset-assert-us = <200000>;
 		reset-deassert-us = <10000>;
