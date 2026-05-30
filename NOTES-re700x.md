@@ -10,14 +10,15 @@ dumps. The ART dump and stock backup files are local recovery inputs only.
 
 - Branch: `tplink-re700x-wip`
 - Boot method: U-Boot/TFTP RAM boot only
-- Current local test image: `/srv/tftp/re700x-factorydata.itb`
+- Current local test image: `/srv/tftp/re700x-wifi-test1.itb`
 - Kernel starts and reaches userspace on initramfs.
 - SPI-NAND is detected and SMEM/MIBIB partitions are exposed correctly.
 - `factory_data` mounts read-only as UBIFS and provides `default-mac`.
 - Ethernet on the external port works through `lan` at 1000 Mbps full duplex.
 - `br-lan` and `lan` use the 6-byte `default-mac` from `factory_data`.
 - Default network config treats the single external port as DHCP client LAN.
-- Wi-Fi remains disabled until calibration/BDF handling is validated.
+- Wi-Fi is enabled for the first RAM-only ath11k test. Calibration is extracted
+  from `0:art`, while BDF/board-2 handling is still expected to need follow-up.
 - No factory or sysupgrade image support is considered ready.
 
 ## Hardware
@@ -103,6 +104,15 @@ tftpboot 0x44000000 re700x-factorydata.itb
 bootm 0x44000000
 ```
 
+Current Wi-Fi test copy:
+
+```text
+setenv serverip 192.168.1.248
+setenv ipaddr 192.168.1.50
+tftpboot 0x44000000 re700x-wifi-test1.itb
+bootm 0x44000000
+```
+
 Post-boot network sanity checks:
 
 ```sh
@@ -146,13 +156,17 @@ br_hex=$(cat /sys/class/net/br-lan/address | tr -d ':')
   `ubi14:ubi_factory_data` at `/tmp/factory_data`; `default-mac` exists as a
   6-byte file; `lan` and `br-lan` both match `default-mac`; DHCP lease and
   ping to the upstream router work.
+- `re700x-wifi-test1.itb` enables the internal IPQ5018 radio and the external
+  QCN6122 userpd2 radio for RAM-only testing. Caldata extraction uses `0:art`
+  offset `0x1000` for IPQ5018 and `0x26800` for QCN6122, with MAC addresses
+  derived from `/tmp/factory_data/default-mac`. No device-specific board-2/BDF
+  package exists yet, so ath11k may still stop at firmware/board data lookup.
 
 ## Current DTS Bring-Up Assumptions
 
 - SPI-NAND is described through QPIC with `qcom,smem-part`.
 - Factory/sysupgrade images are intentionally not defined.
-- Wi-Fi is intentionally left disabled until calibration/BDF details are
-  validated.
+- Wi-Fi is enabled only in RAM-test images for calibration/BDF validation.
 - Ethernet is based on the stock DTB's two NSS-DP/MDIO links, not the
   WN-DAX3000GR QCA8337 switch topology.
 - External Ethernet on `lan` uses the Realtek RTL8211F at MDIO1 address 6.
@@ -170,12 +184,17 @@ br_hex=$(cat /sys/class/net/br-lan/address | tr -d ':')
 - Runtime validation: `/proc/mtd` exposes all 16 SMEM partitions, device-tree
   compatible is `tplink,re700x`, and LEDs enumerate as `green:power`,
   `blue:wps`, `red:wps`, `green:wlan2g`, and `green:wlan5g`.
+- Stock DTB indicates two active radios: internal IPQ5018 on userpd1 and
+  QCN6122 on userpd2; a third radio is disabled. The current OpenWrt DTS
+  mirrors this as `&wifi` and `&wifi1` only.
 
 ## Open Items
 
-- Validate Wi-Fi calibration source and BDF handling without writing flash.
-- Add the minimal ath11k caldata logic only after the data source is confirmed.
-- Enable Wi-Fi in DTS only after calibration handling is understood.
+- Validate first Wi-Fi boot logs from `re700x-wifi-test1.itb`.
+- Create or source correct board-2/BDF data for TP-Link RE700X if ath11k needs
+  it; do not substitute unrelated device board data as a final solution.
+- Confirm generated caldata files and ath11k MAC handling without printing
+  real MAC addresses.
 - Decide later whether this target needs factory/sysupgrade image generation.
 - Keep all tests RAM-boot-only until recovery and install paths are fully
   understood.
