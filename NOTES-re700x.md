@@ -416,6 +416,10 @@ br_hex=$(cat /sys/class/net/br-lan/address | tr -d ':')
   GPIO38/WPS. This isolates polling vs interrupt-style key handling. The FIT
   hash is
   `e86b1eab67381b99f1ab42ed53810e9eaf4d3f1416ccfa6fbe6e1eed4c927b84`.
+- Runtime test with `re700x-wps-gpio38-irq.itb`: pressing WPS still produces
+  no `/tmp/button-test.log` entry and `logread` only reports the
+  `gpio_button_hotplug` module load. GPIO38 is therefore not confirmed as WPS
+  through either `gpio-keys-polled` or `gpio-keys`.
 
 ## Current DTS Bring-Up Assumptions
 
@@ -445,6 +449,9 @@ br_hex=$(cat /sys/class/net/br-lan/address | tr -d ':')
   branch state is intentionally a test, not a final mapping.
 - Stock's keys node does not reference pinctrl, and its separate unreferenced
   `button_pins` child names GPIO38 as `wps_button`.
+- Runtime testing did not confirm WPS events on GPIO31 or GPIO38 with the
+  normal OpenWrt key paths. Further work should inspect stock userspace/kernel
+  behavior before testing additional pins.
 - Stock DTB indicates two active radios: internal IPQ5018 on userpd1 and
   QCN6122 on userpd2; a third radio is disabled. The current OpenWrt DTS
   mirrors this as `&wifi` and `&wifi1` only.
