@@ -24,6 +24,7 @@ build integration, initramfs/FIT generation, and RAM boot via U-Boot/TFTP.
 - Break string: `tpl`
 - Prompt: `IPQ5018#`
 - TFTP works through U-Boot `eth1`
+- U-Boot reports `eth1`/MAC1 PHY ID `0x001cc916`, matching Realtek RTL8211F.
 
 ## GPIOs
 
@@ -75,6 +76,15 @@ tftpboot 0x44000000 openwrt-qualcommax-ipq50xx-tplink_re700x-initramfs-uImage.it
 bootm 0x44000000
 ```
 
+Current local test copy:
+
+```text
+setenv serverip 192.168.1.248
+setenv ipaddr 192.168.1.50
+tftpboot 0x44000000 re700x-rtl8211f.itb
+bootm 0x44000000
+```
+
 ## Current DTS Bring-Up Assumptions
 
 - SPI-NAND is described through QPIC with `qcom,smem-part`.
@@ -83,3 +93,6 @@ bootm 0x44000000
   validated.
 - Ethernet is based on the stock DTB's two NSS-DP/MDIO links, not the
   WN-DAX3000GR QCA8337 switch topology.
+- External Ethernet on `lan` uses the Realtek RTL8211F at MDIO1 address 6.
+- RAM-boot test with `re700x-rtl8211f.itb` links at 1000 Mbps full duplex and
+  can ping the TFTP host with a static address on `lan`.
