@@ -62,6 +62,13 @@ kernel hotplug path is still used and TP-Link userspace consumes generated
 button state files/events. The current OpenWrt DTS therefore uses
 `gpio-keys-polled` for the next RAM-only button test.
 
+Stock DTB caveat: the `gpio-keys-polled` node itself has no `pinctrl-0`
+reference in the decompiled DTB. A separate `button_pins` node exists, but it
+contains only a child named `wps_button` on GPIO38 and appears unreferenced by
+the keys node. GPIO31 appears as the WPS `gpios` entry only. This is a real
+stock-DTB inconsistency and should be treated as evidence, not resolved by
+guessing random GPIOs.
+
 LEDs:
 
 - Power: GPIO38, active high
@@ -365,6 +372,20 @@ br_hex=$(cat /sys/class/net/br-lan/address | tr -d ':')
   `gpio-button-hotplug.ko` supports both `gpio-keys` and `gpio-keys-polled`.
   This points back to the DT/kernel button path rather than a separate
   userspace-only button pin map.
+- Stock rootfs button path:
+  `/etc/init.d/gpio` creates `/dev/gpio` and starts `/usr/bin/gpiod`;
+  `/etc/hotplug.d/button/50-btn-wps` writes `/var/run/btn_wps` when the kernel
+  emits WPS events; `/etc/hotplug.d/button/51-btn-reset` writes
+  `/var/run/btn_reset`. In production mode WPS is handled on `released`; in
+  non-production mode it is handled on `pressed`.
+- Factory/test code uses `/tmp/button_wps_check`, `/tmp/button_reset_check`,
+  and related files as status flags. `tddp` and
+  `luci/controller/admin/button_check.lua` only inspect these files; they do
+  not reveal another hardware GPIO map.
+- `gpiod` also depends on runtime state files such as
+  `/tmp/device_runtime.info`, `/tmp/wifi_mod_exist`, `/tmp/calcmode`, and
+  `/tmp/wifi.conf`. These affect TP-Link LED/WPS state-machine behavior, but
+  not the basic kernel button GPIO declaration.
 - `re700x-keys-polled.itb` changes only the OpenWrt `keys` node from
   `gpio-keys` to stock-style `gpio-keys-polled` with `poll-interval = <100>`.
   The FIT hash is
@@ -399,6 +420,9 @@ br_hex=$(cat /sys/class/net/br-lan/address | tr -d ':')
   blue WPS-like LED on GPIO22. The current DTS exposes only this LED.
 - Buttons are currently stock-style polled GPIO keys: reset on GPIO25
   active-low and WPS on GPIO31 active-low with a 100 ms poll interval.
+- Unlike stock, the current OpenWrt DTS explicitly applies `button_pins` to
+  GPIO25/GPIO31. Stock's keys node does not reference pinctrl, and its separate
+  unreferenced `button_pins` child names GPIO38 as `wps_button`.
 - Stock DTB indicates two active radios: internal IPQ5018 on userpd1 and
   QCN6122 on userpd2; a third radio is disabled. The current OpenWrt DTS
   mirrors this as `&wifi` and `&wifi1` only.
@@ -413,8 +437,10 @@ br_hex=$(cat /sys/class/net/br-lan/address | tr -d ':')
 - Continue from the validated IPQ5018-only baseline image
   `re700x-ipq5018-baseline.itb`.
 - WPS still has no observed event with stock-style `gpio-keys-polled`.
-  Capture more evidence from stock firmware or board-level GPIO routing before
-  guessing more pins.
+  Next controlled tests should compare stock-exact pinctrl behavior rather than
+  guessing more pins: either remove the OpenWrt keys `pinctrl-0` to match
+  stock exactly, or make a single-purpose GPIO38-as-WPS diagnostic because
+  stock's unreferenced `button_pins/wps_button` names GPIO38.
 - Continue LED work cautiously: keep GPIO22 as confirmed, do not test GPIO29
   again, and keep the other stock LED GPIOs disabled until the real front panel
   wiring is identified.
