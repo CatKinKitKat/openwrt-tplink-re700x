@@ -217,12 +217,13 @@
 	pinctrl-0 = <&mdio1_pins>;
 	pinctrl-names = "default";
 	phy-reset-gpio = <&tlmm 33 GPIO_ACTIVE_HIGH>;
-	reset-gpios = <&tlmm 33 GPIO_ACTIVE_HIGH>;
 
 	qca8081_6: ethernet-phy@6 {
 		compatible = "ethernet-phy-id004d.d101";
 		reg = <6>;
+		reset-assert-us = <200000>;
 		reset-deassert-us = <10000>;
+		reset-gpios = <&tlmm 33 GPIO_ACTIVE_LOW>;
 	};
 };
 
