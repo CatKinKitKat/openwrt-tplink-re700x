@@ -1,0 +1,124 @@
+#!/bin/sh
+# TP-Link RE700X LED-GPIO mapping sweep (RAM-boot diagnostic only).
+#
+# Drives one TLMM GPIO at a time HIGH then LOW so you can watch which
+# physical front-panel LED reacts. Reversible: each pin is unexported
+# (mux restored) before moving on. Verifies the real pin state via
+# /sys/kernel/debug/gpio so a result is only trusted when func==gpio/out.
+#
+# Excluded lines (in use or known dangerous on this unit):
+#   4-9   QPIC NAND        19,20 buttons      22 blue WPS LED (confirmed)
+#   24-30 audio block: gpio28 (global 540) AND gpio29 (global 541) both
+#         freeze the live connection, so the whole stock audio_* block
+#         (gpio24..30) is treated as unsafe. Override per-pin at your own
+#         risk with: led-sweep <n>
+#   31,32 console UART     33 RTL8211F reset
+#   36,37 MDIO/MDC         46 gephy led0 (LAN LED, PHY-driven)
+#
+# Usage:
+#   led-sweep            interactive sweep over all candidate GPIOs
+#   led-sweep <n>        test only TLMM gpio <n> (bypasses exclude list)
+#   led-sweep show       dump current gpio debug state and exit
+
+EXCLUDE="4 5 6 7 8 9 19 20 22 24 25 26 27 28 29 30 31 32 33 36 37 46"
+DBG=/sys/kernel/debug/gpio
+
+# Locate the TLMM gpiochip base (global number = base + tlmm_gpio).
+find_base() {
+	for c in /sys/class/gpio/gpiochip*; do
+		[ -r "$c/label" ] || continue
+		l=$(cat "$c/label" 2>/dev/null)
+		n=$(cat "$c/ngpio" 2>/dev/null)
+		case "$l" in
+		*pinctrl*|*tlmm*)
+			if [ "$n" = "47" ]; then
+				cat "$c/base"
+				return 0
+			fi
+			;;
+		esac
+	done
+	# Fallback: notes confirmed global 534 == gpio22, so base 512.
+	echo 512
+}
+
+BASE=$(find_base)
+echo "TLMM gpiochip base = $BASE  (global = base + tlmm_gpio)"
+
+show() {
+	if [ -r "$DBG" ]; then
+		echo "--- $DBG ---"
+		cat "$DBG"
+	else
+		echo "debugfs gpio not mounted; try: mount -t debugfs none /sys/kernel/debug"
+	fi
+}
+
+is_excluded() {
+	for e in $EXCLUDE; do [ "$1" = "$e" ] && return 0; done
+	return 1
+}
+
+dbg_line() {
+	# print the debugfs line for global gpio $1 (verifies func/dir/level)
+	[ -r "$DBG" ] && grep -E "gpio-$1[^0-9]" "$DBG" 2>/dev/null
+}
+
+drive() { # tlmm_gpio
+	g=$1
+	gg=$((BASE + g))
+	if [ ! -d /sys/class/gpio/gpio$gg ]; then
+		echo $gg > /sys/class/gpio/export 2>/dev/null
+	fi
+	if [ ! -d /sys/class/gpio/gpio$gg ]; then
+		echo "  gpio$g (global $gg): export FAILED (line claimed by a driver) -> skip"
+		return 1
+	fi
+	echo out > /sys/class/gpio/gpio$gg/direction 2>/dev/null
+
+	echo "  gpio$g (global $gg): driving HIGH"
+	echo 1 > /sys/class/gpio/gpio$gg/value 2>/dev/null
+	dbg_line $gg
+	printf "    -> LED on now? note it, then [Enter] for LOW: "
+	read _x </dev/console
+
+	echo "  gpio$g (global $gg): driving LOW"
+	echo 0 > /sys/class/gpio/gpio$gg/value 2>/dev/null
+	dbg_line $gg
+	printf "    -> LED on now (active-low)? note it, then [Enter]: "
+	read _x </dev/console
+
+	echo $gg > /sys/class/gpio/unexport 2>/dev/null
+	echo "  gpio$g: released (mux restored)"
+	return 0
+}
+
+[ -d /sys/kernel/debug/gpio ] || mount -t debugfs none /sys/kernel/debug 2>/dev/null
+
+case "$1" in
+show) show; exit 0 ;;
+"")
+	echo "Interactive LED-GPIO sweep. Watch the front panel for each pin."
+	echo "Per pin: [Enter]=test, s=skip, q=quit"
+	g=0
+	while [ $g -le 46 ]; do
+		if is_excluded $g; then g=$((g+1)); continue; fi
+		printf ">> next candidate gpio%s  ([Enter]=test / s=skip / q=quit): " "$g"
+		read a </dev/console
+		case "$a" in
+		q|Q) echo "quit."; exit 0 ;;
+		s|S) g=$((g+1)); continue ;;
+		*) drive $g ;;
+		esac
+		g=$((g+1))
+	done
+	echo "Sweep complete."
+	;;
+*)
+	# single pin
+	if is_excluded "$1"; then
+		echo "gpio$1 is in the EXCLUDE list. Testing anyway at your request."
+	fi
+	drive "$1"
+	;;
+esac
