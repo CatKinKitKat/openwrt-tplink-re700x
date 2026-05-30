@@ -453,14 +453,12 @@ br_hex=$(cat /sys/class/net/br-lan/address | tr -d ':')
   compatible is `tplink,re700x`, and the only visually confirmed LED is the
   blue WPS-like LED on GPIO22. The current DTS exposes only this LED.
 - Buttons are currently stock-style polled GPIO keys: reset on GPIO25
-  active-low and WPS on GPIO38 active-low for the current WN-DAX3000GR-style
-  `gpio-keys` diagnostic image. The stock key node itself names GPIO31; this
-  branch state is intentionally a test, not a final mapping.
+  active-low and WPS on GPIO20 active-low. GPIO20 is confirmed by both a
+  before/after GPIO level diff and a runtime hotplug event.
 - Stock's keys node does not reference pinctrl, and its separate unreferenced
   `button_pins` child names GPIO38 as `wps_button`.
 - Runtime testing did not confirm WPS events on GPIO31 or GPIO38 with the
-  normal OpenWrt key paths. Further work should inspect stock userspace/kernel
-  behavior before testing additional pins.
+  normal OpenWrt key paths. GPIO20 active-low is confirmed as WPS.
 - Do not continue guessing single GPIO numbers for WPS. First run a full GPIO
   before/after diff while holding each physical button, then map only lines that
   actually change.
@@ -470,6 +468,8 @@ br_hex=$(cat /sys/class/net/br-lan/address | tr -d ':')
   `re700x-wps-gpio20.itb` maps WPS to GPIO20 active-low.
   The FIT hash is
   `d284162dbe8f07f54bb21479d5878b66407d3cc9d83046c7f30472de4670490f`.
+- Runtime test with `re700x-wps-gpio20.itb`: pressing WPS creates
+  `/tmp/button-test.log` with `ACTION=pressed BUTTON=wps SEEN=0`.
 - Stock rootfs additionally loads `button-hotplug.ko` and runs `/usr/bin/gpiod`
   against `/dev/gpio`. `gpiod` contains explicit button-check paths for reset,
   WPS, LED switch, and power, and writes `/tmp/button_wps_check` /
