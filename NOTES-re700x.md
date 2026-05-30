@@ -464,6 +464,12 @@ br_hex=$(cat /sys/class/net/br-lan/address | tr -d ':')
 - Do not continue guessing single GPIO numbers for WPS. First run a full GPIO
   before/after diff while holding each physical button, then map only lines that
   actually change.
+- Full GPIO before/after diff while holding WPS found GPIO20 changing from
+  `in high func0 8mA pull down` to `in low func0 8mA pull down`. This is the
+  first direct electrical match for the WPS button; test image
+  `re700x-wps-gpio20.itb` maps WPS to GPIO20 active-low.
+  The FIT hash is
+  `d284162dbe8f07f54bb21479d5878b66407d3cc9d83046c7f30472de4670490f`.
 - Stock rootfs additionally loads `button-hotplug.ko` and runs `/usr/bin/gpiod`
   against `/dev/gpio`. `gpiod` contains explicit button-check paths for reset,
   WPS, LED switch, and power, and writes `/tmp/button_wps_check` /
