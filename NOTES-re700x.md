@@ -369,6 +369,11 @@ br_hex=$(cat /sys/class/net/br-lan/address | tr -d ':')
   `gpio-keys` to stock-style `gpio-keys-polled` with `poll-interval = <100>`.
   The FIT hash is
   `101fa11e2c654c7ea086ec7a264bddccc4e383f71b8a9c8ecc3de2015fe600fd`.
+- Runtime test with `re700x-keys-polled.itb`: the live device tree confirms
+  `/proc/device-tree/keys/compatible` is `gpio-keys-polled`, but pressing WPS
+  still produces no `/tmp/button-test.log` entry and `logread` only shows the
+  `gpio_button_hotplug` module load. This rules out interrupt-only key
+  handling as the immediate cause of the missing WPS event.
 
 ## Current DTS Bring-Up Assumptions
 
@@ -407,9 +412,9 @@ br_hex=$(cat /sys/class/net/br-lan/address | tr -d ':')
   before QCN caldata is requested.
 - Continue from the validated IPQ5018-only baseline image
   `re700x-ipq5018-baseline.itb`.
-- Test `re700x-keys-polled.itb` for WPS/reset button events. If GPIO31 still
-  never changes under polling, capture more evidence from stock firmware or
-  board-level GPIO routing before guessing more pins.
+- WPS still has no observed event with stock-style `gpio-keys-polled`.
+  Capture more evidence from stock firmware or board-level GPIO routing before
+  guessing more pins.
 - Continue LED work cautiously: keep GPIO22 as confirmed, do not test GPIO29
   again, and keep the other stock LED GPIOs disabled until the real front panel
   wiring is identified.
