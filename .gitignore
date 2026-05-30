@@ -35,3 +35,6 @@ git-src
 .cproject
 .ccache
 .vscode*
+/re700x-stock-kernel.fit
+/re700x-mp03.3-c2.dtb
+/re700x-mtd9-art.bin
