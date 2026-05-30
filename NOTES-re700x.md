@@ -62,6 +62,10 @@ LEDs:
 - 2G WLAN: GPIO39, active high
 - 5G WLAN: GPIO13, active high
 
+Only the blue WPS-like LED on GPIO22 is visually confirmed in OpenWrt. The
+other stock DTB LED GPIOs switch electrically but did not affect visible front
+panel LEDs during RAM-boot testing, so they are disabled in the current DTS.
+
 ## Flash Layout from SMEM/MIBIB
 
 Partitions are expected from Qualcomm SMEM/MIBIB. Do not hard-code fixed DTS
@@ -328,6 +332,12 @@ br_hex=$(cat /sys/class/net/br-lan/address | tr -d ':')
   the live shell/network connection to drop. GPIO46 could be switched as normal
   GPIO but did not affect visible LEDs. Other tested free GPIO candidates did
   not visibly control Power, 2.4G, 5G, or red WPS.
+- Runtime LED class tests in the normal baseline confirmed that `blue:wps`
+  drives GPIO22 and the visible blue LED correctly. `green:power`/GPIO38,
+  `green:wlan2g`/GPIO39, `green:wlan5g`/GPIO13, and `red:wps`/GPIO18 all
+  switch electrically between low and high but caused no visible front-panel
+  LED change. These four nodes are therefore disabled until the real front LED
+  wiring is identified.
 
 ## Current DTS Bring-Up Assumptions
 
@@ -349,8 +359,8 @@ br_hex=$(cat /sys/class/net/br-lan/address | tr -d ':')
   `ubi14:ubi_factory_data`, reads the 6-byte `default-mac`, assigns it to
   both `lan` and `br-lan`, and obtains a DHCP lease from the upstream router.
 - Runtime validation: `/proc/mtd` exposes all 16 SMEM partitions, device-tree
-  compatible is `tplink,re700x`, and LEDs enumerate as `green:power`,
-  `blue:wps`, `red:wps`, `green:wlan2g`, and `green:wlan5g`.
+  compatible is `tplink,re700x`, and the only visually confirmed LED is the
+  blue WPS-like LED on GPIO22.
 - Stock DTB indicates two active radios: internal IPQ5018 on userpd1 and
   QCN6122 on userpd2; a third radio is disabled. The current OpenWrt DTS
   mirrors this as `&wifi` and `&wifi1` only.

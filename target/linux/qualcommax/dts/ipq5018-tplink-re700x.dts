@@ -18,10 +18,10 @@
 		ethernet0 = &dp1;
 		ethernet1 = &dp2;
 		label-mac-device = <&dp2>;
-		led-boot = &led_power;
-		led-failsafe = &led_wps_red;
-		led-running = &led_power;
-		led-upgrade = &led_power;
+		led-boot = &led_wps_blue;
+		led-failsafe = &led_wps_blue;
+		led-running = &led_wps_blue;
+		led-upgrade = &led_wps_blue;
 		serial0 = &blsp1_uart1;
 	};
 
@@ -58,6 +58,7 @@
 			color = <LED_COLOR_ID_GREEN>;
 			function = LED_FUNCTION_POWER;
 			linux,default-trigger = "heartbeat";
+			status = "disabled";
 		};
 
 		led_wps_red: wps-red {
@@ -65,6 +66,7 @@
 			color = <LED_COLOR_ID_RED>;
 			function = LED_FUNCTION_WPS;
 			default-state = "off";
+			status = "disabled";
 		};
 
 		led_wps_blue: wps-blue {
@@ -79,6 +81,7 @@
 			color = <LED_COLOR_ID_GREEN>;
 			function = "wlan2g";
 			default-state = "off";
+			status = "disabled";
 		};
 
 		wlan-5g {
@@ -86,6 +89,7 @@
 			color = <LED_COLOR_ID_GREEN>;
 			function = "wlan5g";
 			default-state = "off";
+			status = "disabled";
 		};
 	};
 };
@@ -232,7 +236,7 @@
 	};
 
 	led_pins: led-state {
-		pins = "gpio13", "gpio18", "gpio22", "gpio38", "gpio39";
+		pins = "gpio22";
 		function = "gpio";
 		drive-strength = <8>;
 		bias-pull-down;
