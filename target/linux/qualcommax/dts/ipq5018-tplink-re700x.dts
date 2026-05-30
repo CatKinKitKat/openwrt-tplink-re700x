@@ -172,6 +172,7 @@
 		port@2 {
 			port_id = <2>;
 			mdiobus = <&mdio1>;
+			ethernet-phy-ieee802.3-c45;
 			phy_address = <6>;
 			port_mac_sel = "QGMAC_PORT";
 		};
