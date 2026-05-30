@@ -297,6 +297,7 @@ define Device/tplink_re700x
 	NAND_SIZE := 128m
 	DEVICE_DTS_CONFIG := config@mp03.3-c2
 	IMAGES :=
-	DEVICE_PACKAGES := ath11k-firmware-ipq5018-qcn6122 ethtool kmod-phy-realtek
+	DEVICE_PACKAGES := ath11k-firmware-ipq5018-qcn6122 \
+		ethtool ipq-wifi-tplink_re700x kmod-phy-realtek
 endef
 TARGET_DEVICES += tplink_re700x

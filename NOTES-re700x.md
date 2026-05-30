@@ -10,15 +10,16 @@ dumps. The ART dump and stock backup files are local recovery inputs only.
 
 - Branch: `tplink-re700x-wip`
 - Boot method: U-Boot/TFTP RAM boot only
-- Current local test image: `/srv/tftp/re700x-wifi-test1.itb`
+- Current local test image: `/srv/tftp/re700x-board2-test1.itb`
 - Kernel starts and reaches userspace on initramfs.
 - SPI-NAND is detected and SMEM/MIBIB partitions are exposed correctly.
 - `factory_data` mounts read-only as UBIFS and provides `default-mac`.
 - Ethernet on the external port works through `lan` at 1000 Mbps full duplex.
 - `br-lan` and `lan` use the 6-byte `default-mac` from `factory_data`.
 - Default network config treats the single external port as DHCP client LAN.
-- Wi-Fi is enabled for the first RAM-only ath11k test. Calibration is extracted
-  from `0:art`, while BDF/board-2 handling is still expected to need follow-up.
+- Wi-Fi is enabled for RAM-only ath11k testing. Calibration is extracted from
+  `0:art`; device-specific board-2 files are now included from the stock
+  RE700X EU v1.0 rootfs boarddata.
 - No factory or sysupgrade image support is considered ready.
 
 ## Hardware
@@ -113,6 +114,15 @@ tftpboot 0x44000000 re700x-wifi-test1.itb
 bootm 0x44000000
 ```
 
+Current board-2 Wi-Fi test copy:
+
+```text
+setenv serverip 192.168.1.248
+setenv ipaddr 192.168.1.50
+tftpboot 0x44000000 re700x-board2-test1.itb
+bootm 0x44000000
+```
+
 Post-boot network sanity checks:
 
 ```sh
@@ -161,6 +171,18 @@ br_hex=$(cat /sys/class/net/br-lan/address | tr -d ':')
   offset `0x1000` for IPQ5018 and `0x26800` for QCN6122, with MAC addresses
   derived from `/tmp/factory_data/default-mac`. No device-specific board-2/BDF
   package exists yet, so ath11k may still stop at firmware/board data lookup.
+- Stock `rootfs` was copied read-only from `/dev/mtd11ro` and extracted
+  offline. The UBI image contains the stock FIT in volume 0 and the SquashFS
+  rootfs in volume 2.
+- Stock TP-Link boarddata selection chooses `boarddata_hw1.0/EU` for the EU
+  hardware. The RAM-only OpenWrt test now packages these stock boarddata files
+  as ath11k board-2 containers:
+  `boarddata_hw1.0/EU/bdwlan.b24` for IPQ5018 and
+  `boarddata_hw1.0/EU/bdwlan.b60` for QCN6122.
+- `re700x-board2-test1.itb` includes `ipq-wifi-tplink_re700x`, installing
+  `board-2.bin` for both `ath11k/IPQ5018/hw1.0` and
+  `ath11k/QCN6122/hw1.0`. The FIT hash is
+  `b4d2df528a8a96e4dfc77212fc454f1c80f09bc54590ced6e3be6c7c910e3e5c`.
 
 ## Current DTS Bring-Up Assumptions
 
@@ -187,14 +209,16 @@ br_hex=$(cat /sys/class/net/br-lan/address | tr -d ':')
 - Stock DTB indicates two active radios: internal IPQ5018 on userpd1 and
   QCN6122 on userpd2; a third radio is disabled. The current OpenWrt DTS
   mirrors this as `&wifi` and `&wifi1` only.
+- `ipq-wifi-tplink_re700x` uses board name
+  `bus=ahb,qmi-chip-id=0,qmi-board-id=255,variant=TP-Link-RE700X` for both
+  generated board-2 containers.
 
 ## Open Items
 
-- Validate first Wi-Fi boot logs from `re700x-wifi-test1.itb`.
-- Create or source correct board-2/BDF data for TP-Link RE700X if ath11k needs
-  it; do not substitute unrelated device board data as a final solution.
+- Validate Wi-Fi boot logs from `re700x-board2-test1.itb`.
 - Confirm generated caldata files and ath11k MAC handling without printing
   real MAC addresses.
+- Check whether Q6/WCSS still crashes after board-2 lookup succeeds.
 - Decide later whether this target needs factory/sysupgrade image generation.
 - Keep all tests RAM-boot-only until recovery and install paths are fully
   understood.
