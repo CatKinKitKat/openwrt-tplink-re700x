@@ -425,6 +425,10 @@ br_hex=$(cat /sys/class/net/br-lan/address | tr -d ':')
   electrically not observed as the WPS button line in this setup. GPIO31 is not
   useful in this particular image because it is no longer claimed by the key
   node and shows as `out high`.
+- Direct runtime level check of stock reset candidate GPIO25: no visible level
+  change was observed while pressing reset. This makes the stock button GPIO
+  mapping suspect on this hardware/boot path, or indicates that the buttons are
+  read through a path not visible as ordinary TLMM GPIO input state.
 
 ## Current DTS Bring-Up Assumptions
 
@@ -457,6 +461,9 @@ br_hex=$(cat /sys/class/net/br-lan/address | tr -d ':')
 - Runtime testing did not confirm WPS events on GPIO31 or GPIO38 with the
   normal OpenWrt key paths. Further work should inspect stock userspace/kernel
   behavior before testing additional pins.
+- Do not continue guessing single GPIO numbers for WPS. First run a full GPIO
+  before/after diff while holding each physical button, then map only lines that
+  actually change.
 - Stock rootfs additionally loads `button-hotplug.ko` and runs `/usr/bin/gpiod`
   against `/dev/gpio`. `gpiod` contains explicit button-check paths for reset,
   WPS, LED switch, and power, and writes `/tmp/button_wps_check` /
