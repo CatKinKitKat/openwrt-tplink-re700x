@@ -395,6 +395,12 @@ br_hex=$(cat /sys/class/net/br-lan/address | tr -d ':')
   still produces no `/tmp/button-test.log` entry and `logread` only shows the
   `gpio_button_hotplug` module load. This rules out interrupt-only key
   handling as the immediate cause of the missing WPS event.
+- `re700x-stock-keys-nopinctrl.itb` keeps stock-style `gpio-keys-polled` but
+  removes the explicit OpenWrt `keys` pinctrl reference. This matches the stock
+  keys node more closely; the separate stock `button_pins/wps_button` remains
+  suspicious because it names GPIO38 while the actual WPS key node names GPIO31.
+  The FIT hash is
+  `6aefa5f77157821b0b58304cf74c3fd2193c6b46c038b908c3f4c0ab4ac0fd7c`.
 
 ## Current DTS Bring-Up Assumptions
 
@@ -437,10 +443,9 @@ br_hex=$(cat /sys/class/net/br-lan/address | tr -d ':')
 - Continue from the validated IPQ5018-only baseline image
   `re700x-ipq5018-baseline.itb`.
 - WPS still has no observed event with stock-style `gpio-keys-polled`.
-  Next controlled tests should compare stock-exact pinctrl behavior rather than
-  guessing more pins: either remove the OpenWrt keys `pinctrl-0` to match
-  stock exactly, or make a single-purpose GPIO38-as-WPS diagnostic because
-  stock's unreferenced `button_pins/wps_button` names GPIO38.
+  Current controlled tests compare stock-exact pinctrl behavior first, then a
+  single-purpose GPIO38-as-WPS diagnostic because stock's unreferenced
+  `button_pins/wps_button` names GPIO38.
 - Continue LED work cautiously: keep GPIO22 as confirmed, do not test GPIO29
   again, and keep the other stock LED GPIOs disabled until the real front panel
   wiring is identified.
