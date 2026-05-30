@@ -10,7 +10,7 @@ dumps. The ART dump and stock backup files are local recovery inputs only.
 
 - Branch: `tplink-re700x-wip`
 - Boot method: U-Boot/TFTP RAM boot only
-- Current local test image: `/srv/tftp/re700x-ipq5018-only-mm1.itb`
+- Current local test image: `/srv/tftp/re700x-both-mm1.itb`
 - Kernel starts and reaches userspace on initramfs.
 - SPI-NAND is detected and SMEM/MIBIB partitions are exposed correctly.
 - `factory_data` mounts read-only as UBIFS and provides `default-mac`.
@@ -132,6 +132,15 @@ tftpboot 0x44000000 re700x-ipq5018-only-mm1.itb
 bootm 0x44000000
 ```
 
+Current dual-radio memory-mode-1 test copy:
+
+```text
+setenv serverip 192.168.1.248
+setenv ipaddr 192.168.1.50
+tftpboot 0x44000000 re700x-both-mm1.itb
+bootm 0x44000000
+```
+
 Post-boot network sanity checks:
 
 ```sh
@@ -200,6 +209,12 @@ br_hex=$(cat /sys/class/net/br-lan/address | tr -d ':')
 - `re700x-ipq5018-only-mm1.itb` is an isolation test: QCN6122 is disabled and
   the internal IPQ5018 radio uses firmware memory mode 1. The FIT hash is
   `ac9857a717df5a6ad6dbd6564aa6b3712393a3359ec9ad59513b442baa7b26d6`.
+- `re700x-ipq5018-only-mm1.itb` validates that the internal IPQ5018 radio
+  starts with firmware memory mode 1. `wifi status` reports `radio0` as up;
+  no WLAN interface is configured yet, so `iw dev` remains empty.
+- `re700x-both-mm1.itb` enables both IPQ5018 and QCN6122 with firmware memory
+  mode 1. The FIT hash is
+  `917492c4bb0e18d302bd4bc8e4590c0df63437a85db37f5d3d224757ee4050b8`.
 
 ## Current DTS Bring-Up Assumptions
 
@@ -236,8 +251,8 @@ br_hex=$(cat /sys/class/net/br-lan/address | tr -d ':')
 - Confirm generated caldata files and ath11k MAC handling without printing
   real MAC addresses.
 - Validate isolated Wi-Fi boot logs from `re700x-ipq5018-only-mm1.itb`.
-- Check whether the firmware start timeout still happens with only IPQ5018
-  enabled.
+- Validate dual-radio memory-mode-1 boot logs from `re700x-both-mm1.itb`.
+- Check whether QCN6122 reaches caldata/boarddata loading with memory mode 1.
 - Decide later whether this target needs factory/sysupgrade image generation.
 - Keep all tests RAM-boot-only until recovery and install paths are fully
   understood.
