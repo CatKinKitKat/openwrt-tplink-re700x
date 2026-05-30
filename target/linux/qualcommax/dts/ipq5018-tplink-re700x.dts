@@ -26,7 +26,7 @@
 	};
 
 	chosen {
-		bootargs-append = " coherent_pool=2M";
+		bootargs = "console=ttyMSM0,115200,n8 coherent_pool=2M";
 		stdout-path = "serial0:115200n8";
 	};
 
