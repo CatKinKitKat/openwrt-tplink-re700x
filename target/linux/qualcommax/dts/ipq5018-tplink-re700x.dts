@@ -182,17 +182,25 @@
 	status = "okay";
 
 	label = "wan";
+	qcom,link-poll = <1>;
+	qcom,phy-mdio-addr = <7>;
+	mdio-bus = <&mdio0>;
 	nvmem-cells = <&macaddr_appsblenv_ethaddr 2>;
 	nvmem-cell-names = "mac-address";
+	phy-mode = "sgmii";
 };
 
 &dp2 {
 	status = "okay";
 
 	label = "lan";
+	qcom,link-poll = <1>;
+	qcom,phy-mdio-addr = <6>;
+	mdio-bus = <&mdio1>;
 	phy-handle = <&qca8081_6>;
 	nvmem-cells = <&macaddr_appsblenv_ethaddr 0>;
 	nvmem-cell-names = "mac-address";
+	phy-mode = "sgmii";
 };
 
 &mdio0 {
@@ -208,6 +216,7 @@
 
 	pinctrl-0 = <&mdio1_pins>;
 	pinctrl-names = "default";
+	phy-reset-gpio = <&tlmm 33 GPIO_ACTIVE_HIGH>;
 	reset-gpios = <&tlmm 33 GPIO_ACTIVE_HIGH>;
 
 	qca8081_6: ethernet-phy@6 {
