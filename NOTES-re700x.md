@@ -477,6 +477,9 @@ br_hex=$(cat /sys/class/net/br-lan/address | tr -d ':')
   on confirmed GPIO20 active-low.
   The FIT hash is
   `5749ed6b920be18737c406c758907c1c65613fdd8b6509090b1c200154750591`.
+- Runtime test with `re700x-buttons-gpio19-20.itb`: briefly pressing reset
+  creates `/tmp/button-test.log` with `ACTION=pressed BUTTON=reset SEEN=0`.
+  Reset is confirmed as GPIO19 active-low.
 - Stock rootfs additionally loads `button-hotplug.ko` and runs `/usr/bin/gpiod`
   against `/dev/gpio`. `gpiod` contains explicit button-check paths for reset,
   WPS, LED switch, and power, and writes `/tmp/button_wps_check` /
