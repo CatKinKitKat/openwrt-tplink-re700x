@@ -213,6 +213,7 @@
 	qca8081_6: ethernet-phy@6 {
 		compatible = "ethernet-phy-id004d.d101";
 		reg = <6>;
+		reset-deassert-us = <10000>;
 	};
 };
 
