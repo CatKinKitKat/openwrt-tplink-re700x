@@ -38,7 +38,7 @@
 
 		button-reset {
 			label = "reset";
-			gpios = <&tlmm 25 GPIO_ACTIVE_LOW>;
+			gpios = <&tlmm 19 GPIO_ACTIVE_LOW>;
 			linux,code = <KEY_RESTART>;
 		};
 
@@ -230,7 +230,7 @@
 
 &tlmm {
 	button_pins: button-state {
-		pins = "gpio20", "gpio25";
+		pins = "gpio19", "gpio20";
 		function = "gpio";
 		drive-strength = <8>;
 		bias-pull-up;

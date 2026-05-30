@@ -470,6 +470,13 @@ br_hex=$(cat /sys/class/net/br-lan/address | tr -d ':')
   `d284162dbe8f07f54bb21479d5878b66407d3cc9d83046c7f30472de4670490f`.
 - Runtime test with `re700x-wps-gpio20.itb`: pressing WPS creates
   `/tmp/button-test.log` with `ACTION=pressed BUTTON=wps SEEN=0`.
+- Full GPIO before/after diff while holding reset found GPIO19 changing from
+  `in high func3 8mA pull down` to `in low func3 8mA pull down`. GPIO36 also
+  changed, but it is MDIO/MDC and treated as Ethernet-side noise. Test image
+  `re700x-buttons-gpio19-20.itb` maps reset to GPIO19 active-low and keeps WPS
+  on confirmed GPIO20 active-low.
+  The FIT hash is
+  `5749ed6b920be18737c406c758907c1c65613fdd8b6509090b1c200154750591`.
 - Stock rootfs additionally loads `button-hotplug.ko` and runs `/usr/bin/gpiod`
   against `/dev/gpio`. `gpiod` contains explicit button-check paths for reset,
   WPS, LED switch, and power, and writes `/tmp/button_wps_check` /
