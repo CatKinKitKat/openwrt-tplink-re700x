@@ -10,7 +10,7 @@ dumps. The ART dump and stock backup files are local recovery inputs only.
 
 - Branch: `tplink-re700x-wip`
 - Boot method: U-Boot/TFTP RAM boot only
-- Current local test image: `/srv/tftp/re700x-board2-test1.itb`
+- Current local test image: `/srv/tftp/re700x-ipq5018-only-mm1.itb`
 - Kernel starts and reaches userspace on initramfs.
 - SPI-NAND is detected and SMEM/MIBIB partitions are exposed correctly.
 - `factory_data` mounts read-only as UBIFS and provides `default-mac`.
@@ -123,6 +123,15 @@ tftpboot 0x44000000 re700x-board2-test1.itb
 bootm 0x44000000
 ```
 
+Current isolated IPQ5018 Wi-Fi test copy:
+
+```text
+setenv serverip 192.168.1.248
+setenv ipaddr 192.168.1.50
+tftpboot 0x44000000 re700x-ipq5018-only-mm1.itb
+bootm 0x44000000
+```
+
 Post-boot network sanity checks:
 
 ```sh
@@ -183,6 +192,14 @@ br_hex=$(cat /sys/class/net/br-lan/address | tr -d ':')
   `board-2.bin` for both `ath11k/IPQ5018/hw1.0` and
   `ath11k/QCN6122/hw1.0`. The FIT hash is
   `b4d2df528a8a96e4dfc77212fc454f1c80f09bc54590ced6e3be6c7c910e3e5c`.
+- `re700x-board2-test1.itb` validates that both board-2 files are present and
+  the previous boarddata lookup error is gone. IPQ5018 caldata is generated,
+  but QCN6122 caldata is not generated before ath11k times out. The current
+  blocking error is `failed to wait wlan mode request (mode 0): -110` on
+  `c000000.wifi`.
+- `re700x-ipq5018-only-mm1.itb` is an isolation test: QCN6122 is disabled and
+  the internal IPQ5018 radio uses firmware memory mode 1. The FIT hash is
+  `ac9857a717df5a6ad6dbd6564aa6b3712393a3359ec9ad59513b442baa7b26d6`.
 
 ## Current DTS Bring-Up Assumptions
 
@@ -218,7 +235,9 @@ br_hex=$(cat /sys/class/net/br-lan/address | tr -d ':')
 - Validate Wi-Fi boot logs from `re700x-board2-test1.itb`.
 - Confirm generated caldata files and ath11k MAC handling without printing
   real MAC addresses.
-- Check whether Q6/WCSS still crashes after board-2 lookup succeeds.
+- Validate isolated Wi-Fi boot logs from `re700x-ipq5018-only-mm1.itb`.
+- Check whether the firmware start timeout still happens with only IPQ5018
+  enabled.
 - Decide later whether this target needs factory/sysupgrade image generation.
 - Keep all tests RAM-boot-only until recovery and install paths are fully
   understood.
