@@ -281,6 +281,15 @@ br_hex=$(cat /sys/class/net/br-lan/address | tr -d ':')
   `cal-ahb-c000000.wifi.bin` are present, ath11k starts `c000000.wifi` on
   userpd 1 with firmware memory mode 1, and `wifi status` reports `radio0`
   up. No Q6 fatal error is observed in this baseline.
+- Extended runtime validation with `re700x-ipq5018-baseline.itb`: `/proc/mtd`
+  exposes the expected 16 SMEM partitions, `/proc/device-tree/model` reports
+  `TP-Link RE700X`, compatible strings are `tplink,re700x` and `qcom,ipq5018`,
+  `factory_data` mounts read-only as UBIFS, and the factory default MAC is
+  applied to both `br-lan` and `lan`. LEDs enumerate as `blue:wps`,
+  `green:power`, `green:wlan2g`, `green:wlan5g`, and `red:wps`. `netifd`
+  obtains a DHCP lease on `lan` through `br-lan`; the only observed Wi-Fi
+  userspace warning is `command failed: Not supported (-95)` during antenna
+  configuration, after which `radio0` remains up.
 
 ## Current DTS Bring-Up Assumptions
 
