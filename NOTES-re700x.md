@@ -276,6 +276,11 @@ br_hex=$(cat /sys/class/net/br-lan/address | tr -d ':')
 - `re700x-ipq5018-baseline.itb` is the restored IPQ5018-only RAM-boot baseline
   after QCN isolation testing. The FIT hash is
   `1f8d9d3d9e6f7396518eb69ccdc5c40f2eb649b4b51d0cab88ef68ddbcf53d70`.
+- Runtime test with `re700x-ipq5018-baseline.itb`: Ethernet/DHCP works on
+  `br-lan`, the TFTP host is reachable, IPQ5018 `board-2.bin` and
+  `cal-ahb-c000000.wifi.bin` are present, ath11k starts `c000000.wifi` on
+  userpd 1 with firmware memory mode 1, and `wifi status` reports `radio0`
+  up. No Q6 fatal error is observed in this baseline.
 
 ## Current DTS Bring-Up Assumptions
 
@@ -323,7 +328,7 @@ br_hex=$(cat /sys/class/net/br-lan/address | tr -d ':')
   `re700x-qcn-pd3-default.itb`.
 - QCN6122 remains blocked: PD2 mode 1, PD2 mode 2, and PD3 mode 1 all crash Q6
   before QCN caldata is requested.
-- Validate the restored IPQ5018-only baseline image
+- Continue from the validated IPQ5018-only baseline image
   `re700x-ipq5018-baseline.itb`.
 - Decide later whether this target needs factory/sysupgrade image generation.
 - Keep all tests RAM-boot-only until recovery and install paths are fully
