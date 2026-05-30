@@ -81,7 +81,7 @@ Current local test copy:
 ```text
 setenv serverip 192.168.1.248
 setenv ipaddr 192.168.1.50
-tftpboot 0x44000000 re700x-rtl8211f.itb
+tftpboot 0x44000000 re700x-lan-dhcp.itb
 bootm 0x44000000
 ```
 
@@ -96,3 +96,8 @@ bootm 0x44000000
 - External Ethernet on `lan` uses the Realtek RTL8211F at MDIO1 address 6.
 - RAM-boot test with `re700x-rtl8211f.itb` links at 1000 Mbps full duplex and
   can ping the TFTP host with a static address on `lan`.
+- Board default network config uses `lan` as a DHCP client, matching the
+  single-port repeater/AP use case.
+- Runtime validation: `/proc/mtd` exposes all 16 SMEM partitions, device-tree
+  compatible is `tplink,re700x`, and LEDs enumerate as `green:power`,
+  `blue:wps`, `red:wps`, `green:wlan2g`, and `green:wlan5g`.
