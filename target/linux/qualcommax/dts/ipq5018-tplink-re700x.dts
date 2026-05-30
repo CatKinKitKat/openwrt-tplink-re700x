@@ -287,6 +287,7 @@
 	status = "okay";
 
 	qcom,rproc = <&q6_wcss_pd1>;
+	qcom,userpd-subsys-name = "q6v5_wcss_userpd1";
 	qcom,ath11k-calibration-variant = "TP-Link-RE700X";
 	qcom,ath11k-fw-memory-mode = <1>;
 	qcom,bdf-addr = <0x4c400000>;
@@ -301,8 +302,8 @@
 	qcom,userpd-subsys-name = "q6v5_wcss_userpd2";
 	qcom,ath11k-calibration-variant = "TP-Link-RE700X";
 	qcom,ath11k-fw-memory-mode = <1>;
-	qcom,bdf-addr = <0x4d100000>;
-	qcom,m3-dump-addr = <0x4df00000>;
+	qcom,bdf-addr = <0x4d200000>;
+	qcom,m3-dump-addr = <0x4de00000>;
 
 	ieee80211-freq-limit = <5150000 5730000>;
 };

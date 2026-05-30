@@ -10,7 +10,7 @@ dumps. The ART dump and stock backup files are local recovery inputs only.
 
 - Branch: `tplink-re700x-wip`
 - Boot method: U-Boot/TFTP RAM boot only
-- Current local test image: `/srv/tftp/re700x-both-mm1.itb`
+- Current local test image: `/srv/tftp/re700x-stockmem-mm1.itb`
 - Kernel starts and reaches userspace on initramfs.
 - SPI-NAND is detected and SMEM/MIBIB partitions are exposed correctly.
 - `factory_data` mounts read-only as UBIFS and provides `default-mac`.
@@ -141,6 +141,15 @@ tftpboot 0x44000000 re700x-both-mm1.itb
 bootm 0x44000000
 ```
 
+Current stock-memory dual-radio test copy:
+
+```text
+setenv serverip 192.168.1.248
+setenv ipaddr 192.168.1.50
+tftpboot 0x44000000 re700x-stockmem-mm1.itb
+bootm 0x44000000
+```
+
 Post-boot network sanity checks:
 
 ```sh
@@ -215,6 +224,13 @@ br_hex=$(cat /sys/class/net/br-lan/address | tr -d ':')
 - `re700x-both-mm1.itb` enables both IPQ5018 and QCN6122 with firmware memory
   mode 1. The FIT hash is
   `917492c4bb0e18d302bd4bc8e4590c0df63437a85db37f5d3d224757ee4050b8`.
+- `re700x-both-mm1.itb` still times out on `c000000.wifi` when QCN6122 is
+  enabled, even though IPQ5018 alone works with memory mode 1.
+- Stock DTB uses `qcom,userpd-subsys-name = "q6v5_wcss_userpd1"` for the
+  internal IPQ5018 radio and places QCN6122 BDF/M3 regions at `0x4d200000` and
+  `0x4de00000`. `re700x-stockmem-mm1.itb` tests those stock-derived addresses
+  while keeping both radios on firmware memory mode 1. The FIT hash is
+  `4f36a34892656492038b561cb393859b75516cd9f2a19bf4ed489b339781bac4`.
 
 ## Current DTS Bring-Up Assumptions
 
@@ -252,7 +268,9 @@ br_hex=$(cat /sys/class/net/br-lan/address | tr -d ':')
   real MAC addresses.
 - Validate isolated Wi-Fi boot logs from `re700x-ipq5018-only-mm1.itb`.
 - Validate dual-radio memory-mode-1 boot logs from `re700x-both-mm1.itb`.
-- Check whether QCN6122 reaches caldata/boarddata loading with memory mode 1.
+- Validate stock-memory dual-radio boot logs from `re700x-stockmem-mm1.itb`.
+- Check whether moving the QCN6122 BDF/M3 regions avoids the IPQ5018 firmware
+  start timeout.
 - Decide later whether this target needs factory/sysupgrade image generation.
 - Keep all tests RAM-boot-only until recovery and install paths are fully
   understood.
