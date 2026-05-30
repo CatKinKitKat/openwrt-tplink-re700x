@@ -1,7 +1,24 @@
 # TP-Link RE700X EU v1.0 WIP Notes
 
-Status: experimental OpenWrt bring-up only. Do not flash. Current goal is DTS,
+Status: experimental OpenWrt bring-up only. Do not flash. Current scope is DTS,
 build integration, initramfs/FIT generation, and RAM boot via U-Boot/TFTP.
+
+Do not publish device-specific MAC addresses, serial numbers, PINs, or ART
+dumps. The ART dump and stock backup files are local recovery inputs only.
+
+## Current Status
+
+- Branch: `tplink-re700x-wip`
+- Boot method: U-Boot/TFTP RAM boot only
+- Current local test image: `/srv/tftp/re700x-factorydata.itb`
+- Kernel starts and reaches userspace on initramfs.
+- SPI-NAND is detected and SMEM/MIBIB partitions are exposed correctly.
+- `factory_data` mounts read-only as UBIFS and provides `default-mac`.
+- Ethernet on the external port works through `lan` at 1000 Mbps full duplex.
+- `br-lan` and `lan` use the 6-byte `default-mac` from `factory_data`.
+- Default network config treats the single external port as DHCP client LAN.
+- Wi-Fi remains disabled until calibration/BDF handling is validated.
+- No factory or sysupgrade image support is considered ready.
 
 ## Hardware
 
@@ -25,6 +42,7 @@ build integration, initramfs/FIT generation, and RAM boot via U-Boot/TFTP.
 - Prompt: `IPQ5018#`
 - TFTP works through U-Boot `eth1`
 - U-Boot reports `eth1`/MAC1 PHY ID `0x001cc916`, matching Realtek RTL8211F.
+- Use `setenv` only for RAM-boot tests. Do not `saveenv` as part of bring-up.
 
 ## GPIOs
 
@@ -85,6 +103,50 @@ tftpboot 0x44000000 re700x-factorydata.itb
 bootm 0x44000000
 ```
 
+Post-boot network sanity checks:
+
+```sh
+mount | grep factory_data
+ls -l /tmp/factory_data
+ip addr show dev br-lan
+ip link show dev lan
+ping -c 3 192.168.1.1
+```
+
+MAC check without printing the real address:
+
+```sh
+factory_hex=$(hexdump -v -e '6/1 "%02x"' /tmp/factory_data/default-mac)
+lan_hex=$(cat /sys/class/net/lan/address | tr -d ':')
+br_hex=$(cat /sys/class/net/br-lan/address | tr -d ':')
+
+[ "$lan_hex" = "$factory_hex" ] && echo "lan equals default-mac" || echo "lan differs from default-mac"
+[ "$br_hex" = "$factory_hex" ] && echo "br-lan equals default-mac" || echo "br-lan differs from default-mac"
+```
+
+## Bring-Up Log
+
+- Initial DTS/build integration created `tplink,re700x` for
+  `qualcommax/ipq50xx` and produced a bootable initramfs FIT using
+  `config@mp03.3-c2`.
+- First RAM boot reached userspace. The early U-Boot warnings about missing
+  `/soc/qpic-nand@79b0000` and PCI did not block Linux boot.
+- SMEM partition parsing works. `/proc/mtd` exposes all 16 expected
+  partitions from MIBIB/SMEM.
+- Initial Ethernet assumptions were corrected: the external port is not
+  QCA8081. U-Boot PHY ID `0x001cc916` and runtime tests match Realtek
+  RTL8211F on MDIO1 address 6.
+- `re700x-rtl8211f.itb` validated external `lan` link at 1000 Mbps full duplex
+  and successful ping to the TFTP host with a static IP.
+- `re700x-lan-dhcp2.itb` validated default DHCP client config on `br-lan` with
+  `lan` as its single bridge port.
+- `re700x-macfix.itb` confirmed that MAC setup still failed while
+  `factory_data` was not mounted.
+- `re700x-factorydata.itb` validated read-only mount of
+  `ubi14:ubi_factory_data` at `/tmp/factory_data`; `default-mac` exists as a
+  6-byte file; `lan` and `br-lan` both match `default-mac`; DHCP lease and
+  ping to the upstream router work.
+
 ## Current DTS Bring-Up Assumptions
 
 - SPI-NAND is described through QPIC with `qcom,smem-part`.
@@ -108,3 +170,12 @@ bootm 0x44000000
 - Runtime validation: `/proc/mtd` exposes all 16 SMEM partitions, device-tree
   compatible is `tplink,re700x`, and LEDs enumerate as `green:power`,
   `blue:wps`, `red:wps`, `green:wlan2g`, and `green:wlan5g`.
+
+## Open Items
+
+- Validate Wi-Fi calibration source and BDF handling without writing flash.
+- Add the minimal ath11k caldata logic only after the data source is confirmed.
+- Enable Wi-Fi in DTS only after calibration handling is understood.
+- Decide later whether this target needs factory/sysupgrade image generation.
+- Keep all tests RAM-boot-only until recovery and install paths are fully
+  understood.
