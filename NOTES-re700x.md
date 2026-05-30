@@ -98,6 +98,8 @@ bootm 0x44000000
   can ping the TFTP host with a static address on `lan`.
 - Board default network config uses `lan` as a DHCP client, matching the
   single-port repeater/AP use case.
+- RAM-boot test with `re700x-lan-dhcp2.itb` creates `br-lan`, brings `lan` up
+  through netifd, and obtains an IPv4 DHCP lease from the upstream router.
 - Runtime validation: `/proc/mtd` exposes all 16 SMEM partitions, device-tree
   compatible is `tplink,re700x`, and LEDs enumerate as `green:power`,
   `blue:wps`, `red:wps`, `green:wlan2g`, and `green:wlan5g`.
