@@ -284,7 +284,7 @@
 };
 
 &wifi {
-	status = "okay";
+	status = "disabled";
 
 	qcom,rproc = <&q6_wcss_pd1>;
 	qcom,userpd-subsys-name = "q6v5_wcss_userpd1";

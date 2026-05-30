@@ -10,7 +10,7 @@ dumps. The ART dump and stock backup files are local recovery inputs only.
 
 - Branch: `tplink-re700x-wip`
 - Boot method: U-Boot/TFTP RAM boot only
-- Current local test image: `/srv/tftp/re700x-stockmem-mm1.itb`
+- Current local test image: `/srv/tftp/re700x-qcn-only-mm1.itb`
 - Kernel starts and reaches userspace on initramfs.
 - SPI-NAND is detected and SMEM/MIBIB partitions are exposed correctly.
 - `factory_data` mounts read-only as UBIFS and provides `default-mac`.
@@ -150,6 +150,15 @@ tftpboot 0x44000000 re700x-stockmem-mm1.itb
 bootm 0x44000000
 ```
 
+Current QCN6122-only memory-mode-1 test copy:
+
+```text
+setenv serverip 192.168.1.248
+setenv ipaddr 192.168.1.50
+tftpboot 0x44000000 re700x-qcn-only-mm1.itb
+bootm 0x44000000
+```
+
 Post-boot network sanity checks:
 
 ```sh
@@ -231,6 +240,12 @@ br_hex=$(cat /sys/class/net/br-lan/address | tr -d ':')
   `0x4de00000`. `re700x-stockmem-mm1.itb` tests those stock-derived addresses
   while keeping both radios on firmware memory mode 1. The FIT hash is
   `4f36a34892656492038b561cb393859b75516cd9f2a19bf4ed489b339781bac4`.
+- `re700x-stockmem-mm1.itb` still times out on `c000000.wifi`, so the
+  stock-derived QCN BDF/M3 addresses alone do not solve the dual-radio start
+  issue.
+- `re700x-qcn-only-mm1.itb` disables the internal IPQ5018 radio and keeps
+  QCN6122 on PD2 with memory mode 1 and stock-derived memory hints. The FIT
+  hash is `60d34394c6e22fa799211f788d780076cc5302676898c100ce6b00c88584b8c2`.
 
 ## Current DTS Bring-Up Assumptions
 
@@ -271,6 +286,9 @@ br_hex=$(cat /sys/class/net/br-lan/address | tr -d ':')
 - Validate stock-memory dual-radio boot logs from `re700x-stockmem-mm1.itb`.
 - Check whether moving the QCN6122 BDF/M3 regions avoids the IPQ5018 firmware
   start timeout.
+- Validate QCN6122-only boot logs from `re700x-qcn-only-mm1.itb`.
+- Check whether QCN6122 can boot at all when the internal IPQ5018 ath11k node
+  is disabled.
 - Decide later whether this target needs factory/sysupgrade image generation.
 - Keep all tests RAM-boot-only until recovery and install paths are fully
   understood.
