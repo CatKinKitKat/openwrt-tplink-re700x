@@ -172,7 +172,6 @@
 		port@2 {
 			port_id = <2>;
 			mdiobus = <&mdio1>;
-			ethernet-phy-ieee802.3-c45;
 			phy_address = <6>;
 			port_mac_sel = "QGMAC_PORT";
 		};
@@ -195,13 +194,9 @@
 	status = "okay";
 
 	label = "lan";
-	qcom,link-poll = <1>;
-	qcom,phy-mdio-addr = <6>;
-	mdio-bus = <&mdio1>;
 	phy-handle = <&qca8081_6>;
 	nvmem-cells = <&macaddr_appsblenv_ethaddr 0>;
 	nvmem-cell-names = "mac-address";
-	phy-mode = "sgmii";
 };
 
 &mdio0 {
