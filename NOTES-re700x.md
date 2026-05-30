@@ -81,7 +81,7 @@ Current local test copy:
 ```text
 setenv serverip 192.168.1.248
 setenv ipaddr 192.168.1.50
-tftpboot 0x44000000 re700x-lan-dhcp.itb
+tftpboot 0x44000000 re700x-factorydata.itb
 bootm 0x44000000
 ```
 
@@ -102,6 +102,9 @@ bootm 0x44000000
   through netifd, and obtains an IPv4 DHCP lease from the upstream router.
 - `factory_data` is mounted read-only during preinit for TP-Link RE700X so
   board scripts can read `/tmp/factory_data/default-mac`.
+- RAM-boot test with `re700x-factorydata.itb` mounts `factory_data` as
+  `ubi14:ubi_factory_data`, reads the 6-byte `default-mac`, assigns it to
+  both `lan` and `br-lan`, and obtains a DHCP lease from the upstream router.
 - Runtime validation: `/proc/mtd` exposes all 16 SMEM partitions, device-tree
   compatible is `tplink,re700x`, and LEDs enumerate as `green:power`,
   `blue:wps`, `red:wps`, `green:wlan2g`, and `green:wlan5g`.
