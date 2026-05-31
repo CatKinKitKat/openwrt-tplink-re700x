@@ -10,6 +10,19 @@ stays valid across later documentation commits.
 > Only flash from stock with UART access + a NAND backup. `sysupgrade`
 > (OpenWrt→OpenWrt) is safe. See `README.RE700X.md`.
 
+## v1.4 — 2026-05-31 (tag `re700x-v1.4`)
+
+**Both Wi-Fi radios stable at once** — the OOM fix.
+
+- **ath11k DP-ring shrink** (`patches/ath11k/952-ath11k-reduce-dp-ring-sizes-for-256MB.patch`,
+  values from openwrt/openwrt#21495 / `CONFIG_ATH11K_SMALLBUFFERS`): ath11k
+  pre-allocated ~94 MB of oversized RX/TX ring skbs (per radio) → OOM with both
+  radios on 256 MB. Shrunk the rings (TX-comp 32768→2048, RXDMA-buf 4096→1024,
+  monitor rings 1024/4096/2048→512/128/128).
+- **5 GHz (QCN6122) re-enabled** — both radios now run with **~48 MB free** on the
+  256 MB device, confirmed stable on hardware.
+- sha256 (sysupgrade): see the release's `SHA256SUMS` (CI-built).
+
 ## v1.3 — 2026-05-31 (tag `re700x-v1.3`)
 
 Slimmer, nicer web UI + German. **Theme is `luci-theme-material`** (the Argon
