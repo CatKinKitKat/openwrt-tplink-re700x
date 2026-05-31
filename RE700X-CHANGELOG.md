@@ -6,6 +6,17 @@ the `squashfs-sysupgrade.bin` built from that commit. Doc-only changes
 (NOTES/CHANGELOG) do not alter the firmware image, so a tagged image's sha256
 stays valid across later documentation commits.
 
+## v1.2 — 2026-05-31 (tag `re700x-v1.2`)
+
+Same firmware as v1.0/v1.1 — this release adds automation + docs:
+
+- **CI auto-build**: pushing a `re700x-v*` tag now builds the image and publishes
+  the release with all assets automatically via GitHub Actions
+  (`.github/workflows/re700x-release.yml`), using the built-in `GITHUB_TOKEN`.
+- README: "Install from stock via web GUI" section (web-flash is the primary
+  install path now; UART/TFTP demoted to recovery).
+- sha256 (sysupgrade): see the release's `SHA256SUMS` (CI-built).
+
 ## v1.1 — 2026-05-31 (tag `re700x-v1.1`)
 
 Adds a **web-UI-flashable factory image** — install OpenWrt on a stock RE700X
