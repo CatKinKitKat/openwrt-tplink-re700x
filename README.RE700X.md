@@ -4,11 +4,10 @@ A work-in-progress OpenWrt port for the **TP-Link RE700X** Wi-Fi 6 range
 extender (EU v1.0), based on the `qualcommax` target. Built on a full OpenWrt
 tree; this README covers only the RE700X-specific port.
 
-> ⚠️ **Status: working but WIP.** Installing currently requires a serial (UART)
-> console for the initial flash, and a NAND backup is strongly recommended
-> before you start. A plug-and-play image flashable from the stock TP-Link web
-> UI is in progress (see *Roadmap*). Don't flash this unless you understand the
-> recovery path.
+> ✅ **Status: working.** OpenWrt installs **from the stock TP-Link web UI** —
+> no soldering, no UART (see *Install from stock via web GUI*). A NAND backup is
+> still recommended, and a UART console is the recovery path if anything goes
+> wrong.
 
 ## What works
 
@@ -19,7 +18,7 @@ tree; this README covers only the RE700X-specific port.
 | 5 front LEDs + 2 buttons | ✅ |
 | 2.4 GHz Wi-Fi 6 (IPQ5018) | ✅ |
 | 5 GHz Wi-Fi 6 (QCN6122) | ✅ |
-| Web-UI-flashable factory image | 🔧 in progress |
+| Web-UI-flashable factory image | ✅ |
 
 Both radios run as APs simultaneously and are stable.
 
@@ -47,7 +46,38 @@ Output in `bin/targets/qualcommax/ipq50xx/`:
 - `…tplink_re700x-squashfs-factory.ubi` — raw UBI for initial install
 - `…tplink_re700x-initramfs-uImage.itb` — RAM boot via U-Boot/TFTP (for testing)
 
-## Installing (current method — needs UART)
+## Install from stock via web GUI (recommended, no UART)
+
+The easy path — flash straight from the **stock** TP-Link web interface:
+
+1. Grab the factory image from the latest [release](../../releases)
+   (`re700x-v1.1-factory-webflash.bin`), or build it yourself (below).
+2. On the stock RE700X: web UI → **System → Firmware Upgrade**.
+3. Upload `re700x-v1.1-factory-webflash.bin` and start the upgrade.
+4. The device writes OpenWrt to the inactive dual-boot slot and reboots into it.
+   Your stock firmware stays in the other slot as a fallback.
+
+Requirements: the device must be running **stock firmware** with an installed
+version ≤ the image's `soft_ver` (the released image is bumped to `9.9.9` so it
+always passes the stock anti-downgrade check). Verify the download against
+`SHA256SUMS` before flashing.
+
+### Build the factory image yourself
+
+```sh
+# in the OpenWrt tree, after a normal build
+./re700x-factory-pack.py \
+  --os bin/targets/qualcommax/ipq50xx/openwrt-qualcommax-ipq50xx-tplink_re700x-squashfs-factory.ubi \
+  --bump-version "9.9.9 Build 20991231 Rel. 99999" \
+  -o re700x-factory.bin
+```
+
+This wraps the rootfs UBI into the stock `nvrammanager` upload format (TP-Link
+safeloader + the reverse-engineered `FwUpTbl` partition table). The format was
+reverse-engineered from the stock `nvrammanager` and the whole flash path is
+verified on real hardware — details in `RE700X-FACTORY-IMAGE-PROBLEM.md`.
+
+## Alternative: UART / TFTP (recovery or development)
 
 1. **Back up the stock NAND first** (via U-Boot or a running system). Keep it.
 2. Test in RAM via U-Boot/TFTP before touching flash:
@@ -82,10 +112,10 @@ versioned images.
 
 ## Roadmap
 
-- [ ] Factory image flashable from the stock TP-Link web UI (no soldering).
-      The stock web upgrade uses `nvrammanager -u` with **no RSA signature** —
-      only a `support-list` + `soft_ver` + MD5 check — so a wrapped image is
-      feasible.
+- [x] Factory image flashable from the stock TP-Link web UI (no soldering) —
+      `re700x-factory-pack.py`, verified end-to-end on real hardware.
+- [ ] Integrate the `FwUpTbl` format into `tplink-safeloader` so `make` emits a
+      ready-to-flash `factory.bin` directly (instead of the separate packer).
 - [ ] WPA3 (SAE) defaults.
 - [ ] Upstreaming to OpenWrt.
 
