@@ -1,0 +1,11 @@
+#!/bin/sh
+# RE700X: default the LuCI web UI to German. Runs once on first boot, then is
+# removed. No-op on every other board (gated on board_name).
+. /lib/functions.sh
+
+[ "$(board_name)" = "tplink,re700x" ] || exit 0
+uci -q get luci.main >/dev/null 2>&1 || exit 0
+
+uci -q set luci.main.lang='de'
+uci -q commit luci
+exit 0

@@ -66,6 +66,7 @@ jobs:
           CONFIG_TARGET_qualcommax=y
           CONFIG_TARGET_qualcommax_ipq50xx=y
           CONFIG_TARGET_qualcommax_ipq50xx_DEVICE_tplink_re700x=y
+          CONFIG_LUCI_LANG_de=y
           EOF
           make defconfig
 

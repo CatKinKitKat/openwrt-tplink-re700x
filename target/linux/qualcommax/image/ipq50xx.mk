@@ -299,6 +299,9 @@ define Device/tplink_re700x
 	NAND_SIZE := 128m
 	DEVICE_DTS_CONFIG := config@mp02.1
 	DEVICE_PACKAGES := ath11k-firmware-ipq5018-qcn6122 \
-		ethtool ipq-wifi-tplink_re700x kmod-phy-realtek
+		ethtool ipq-wifi-tplink_re700x kmod-phy-realtek \
+		luci-light uhttpd uhttpd-mod-ubus \
+		luci-theme-argon luci-app-argon-config \
+		luci-app-statistics luci-app-usteer usteer
 endef
 TARGET_DEVICES += tplink_re700x
