@@ -20,11 +20,34 @@ tree; this README covers only the RE700X-specific port.
 | Boot from NAND (persistent) | ✅ |
 | Ethernet (WAN/LAN, RTL8211F) | ✅ |
 | 5 front LEDs + 2 buttons | ✅ |
-| 2.4 GHz Wi-Fi 6 (IPQ5018) | ✅ |
-| 5 GHz Wi-Fi 6 (QCN6122) | ✅ |
+| 2.4 GHz Wi-Fi 6 (IPQ5018) | ✅ (single radio) |
+| 5 GHz Wi-Fi 6 (QCN6122) | ✅ (single radio) |
+| **Both radios at once** | ❌ OOM on 256 MB — see *Known issue: RAM* |
 | Web-UI-flashable factory image | ⚠️ experimental (bricked a unit) |
 
-Both radios run as APs simultaneously and are stable.
+Each radio works. Running **both radios + full default services** exhausts the
+256 MB RAM and the OOM-killer reboots the device after ~30–60 s. A single radio
+(2.4 *or* 5 GHz) is stable.
+
+## Known issue: RAM / out-of-memory with both radios
+
+On this 256 MB device (~184 MB usable after firmware reservations) the mainline
+**ath11k + nss-dp** network stack alone consumes ~90–110 MB, leaving too little
+for userspace → OOM-kill reboot loop. Pinned via `/proc/allocinfo` (kernel
+`CONFIG_MEM_ALLOC_PROFILING`); the dominant consumers are:
+
+- **`__page_frag_cache_refill` ≈ 54 MB and growing** — network-driver RX page
+  fragments (nss-dp/EDMA Ethernet + ath11k RX).
+- `__dma_direct_alloc_pages` ≈ 19 MB + `atomic_pool_expand` ≈ 16 MB — ath11k /
+  coherent DMA.
+- `alloc_slab_page` ≈ 20 MB, skb ≈ 5 MB.
+
+These live outside the normal `/proc/meminfo` counters, which is why `free`
+showed ~100 MB "missing". It is **not** a userspace/package problem and **not**
+fixed by `qcom,ath11k-fw-memory-mode` (mainline ath11k ignores that DT property).
+The real fix is reducing the EDMA/ath11k RX-buffer footprint (driver/DT) — open
+work; the `allocinfo` data above is the evidence for an upstream/community report.
+**Workaround: run a single radio.**
 
 ## Hardware
 
