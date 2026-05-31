@@ -6,6 +6,21 @@ the `squashfs-sysupgrade.bin` built from that commit. Doc-only changes
 (NOTES/CHANGELOG) do not alter the firmware image, so a tagged image's sha256
 stays valid across later documentation commits.
 
+## v1.3 — 2026-05-31 (tag `re700x-v1.3`)
+
+Slimmer, nicer web UI + German.
+
+- Dropped `luci-ssl` + `luci-app-firewall` + `luci-app-package-manager` (and the
+  old custom theme) → `luci-light` + `luci-app-statistics` (Network / Wireless /
+  System / Status / Statistics only). Much less cluttered.
+- **`luci-theme-argon`** + `luci-app-argon-config` — modern, configurable look
+  (background, blur, accent colour, dark mode), set in the UI.
+- Web UI defaults to **German** (`CONFIG_LUCI_LANG_de=y` + a board-gated
+  `uci-defaults` that sets `luci.main.lang=de`).
+- `usteer` + `luci-app-usteer` kept (wired-backhaul client steering / roaming).
+- DTS: tidied the QCN6122 comment block (no functional change).
+- sha256 (sysupgrade): see the release's `SHA256SUMS` (CI-built).
+
 ## v1.2 — 2026-05-31 (tag `re700x-v1.2`)
 
 Same firmware as v1.0/v1.1 — this release adds automation + docs:

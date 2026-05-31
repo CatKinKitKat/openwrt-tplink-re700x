@@ -314,30 +314,12 @@
 };
 
 &wifi1 {
-	/* QCN6122 5G. Use the canonical OpenWrt PD2 memory layout
-	 * (bdf 0x4d100000 / m3-dump 0x4df00000) shared by all working
-	 * IPQ5018+QCN6122 devices. The stock-DTB-derived 0x4d200000 /
-	 * 0x4de00000 overlapped the Q6 SMEM region and crashed Q6 with
-	 * err_smem_ver.2.1.
-	 */
-	/* QCN6122 5GHz is BLOCKED: the userpd firmware stalls in init
-	 * (DOG watchdog -> err_smem_ver) ~40s after spawn, before any QMI
-	 * exchange. Ruled out by testing: custom vs no board-2, stock vs
-	 * canonical bdf/m3 addresses, boot-args PCIE0/GPIO15 and PCIE1/GPIO18,
-	 * and UPD2 vs UPD3. On UPD2 the 2.4G radio survives; on UPD3 even the
-	 * IPQ5018 fails QMI (-110). Next step is to read the QCN init/reset
-	 * sequence from the stock firmware rather than guessing.
-	 *
-	 * RE-TEST with coherent_pool=8M: pd-2 now boots (the DMA pool
-	 * exhaustion that had blocked the IPQ5018 2.4G radio is gone), but the
-	 * QCN userpd still stalls in init -> DOG watchdog err_smem_ver.2.1
-	 * ~40s in, which then crashes the cd00000 root PD and takes the working
-	 * 2.4G radio down with it (QMI -110), plus "Coldboot Calibration timed
-	 * out". So the block is NOT the DMA pool; the QCN needs its stock
-	 * init/reset sequence.
-	 *
-	 * TRY: stock boot-args now pass PCIE1 + reset gpio27 for UPD2 (see
-	 * &q6v5_wcss above), the value never tried before. Re-enabled to test.
+	/*
+	 * QCN6122 5 GHz. Use the canonical OpenWrt PD2 memory layout
+	 * (bdf 0x4d100000 / m3-dump 0x4df00000) and the stock-derived
+	 * q6v5_wcss boot-args above, which put UPD2 on PCIE1 with reset
+	 * GPIO 27. This combination lets the userpd finish init and keeps
+	 * both ath11k radios online.
 	 */
 	status = "okay";
 
