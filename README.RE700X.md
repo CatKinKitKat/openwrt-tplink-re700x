@@ -4,10 +4,14 @@ A work-in-progress OpenWrt port for the **TP-Link RE700X** Wi-Fi 6 range
 extender (EU v1.0), based on the `qualcommax` target. Built on a full OpenWrt
 tree; this README covers only the RE700X-specific port.
 
-> ✅ **Status: working.** OpenWrt installs **from the stock TP-Link web UI** —
-> no soldering, no UART (see *Install from stock via web GUI*). A NAND backup is
-> still recommended, and a UART console is the recovery path if anything goes
-> wrong.
+> ⚠️ **Status: working — but the stock web-GUI install is EXPERIMENTAL and has
+> bricked a unit.** Once OpenWrt is installed it runs great, and `sysupgrade`
+> (OpenWrt→OpenWrt) is safe and repeatable. **But the *initial* flash from the
+> stock web GUI bricked a second, healthy device** (clean stock, no UART) — it
+> booted nothing and is recoverable only via UART. This bootloader has **no
+> button/TFTP recovery**. **Do not flash from stock without UART access and a
+> full NAND backup.** Suspected cause under investigation (dual-boot slot /
+> `ubi.mtd=` cmdline mismatch — see §*Install from stock*).
 
 ## What works
 
@@ -18,7 +22,7 @@ tree; this README covers only the RE700X-specific port.
 | 5 front LEDs + 2 buttons | ✅ |
 | 2.4 GHz Wi-Fi 6 (IPQ5018) | ✅ |
 | 5 GHz Wi-Fi 6 (QCN6122) | ✅ |
-| Web-UI-flashable factory image | ✅ |
+| Web-UI-flashable factory image | ⚠️ experimental (bricked a unit) |
 
 Both radios run as APs simultaneously and are stable.
 
@@ -46,9 +50,19 @@ Output in `bin/targets/qualcommax/ipq50xx/`:
 - `…tplink_re700x-squashfs-factory.ubi` — raw UBI for initial install
 - `…tplink_re700x-initramfs-uImage.itb` — RAM boot via U-Boot/TFTP (for testing)
 
-## Install from stock via web GUI (recommended, no UART)
+## Install from stock via web GUI (EXPERIMENTAL — have UART ready)
 
-The easy path — flash straight from the **stock** TP-Link web interface:
+> ⚠️ **This has bricked a device.** It worked on one unit and left a second,
+> healthy unit dead (booted nothing) after a clean stock web-GUI flash with no
+> UART attached. There is **no button/TFTP recovery** on this bootloader, so a
+> failed flash needs UART to recover. Suspected cause (pending a serial log):
+> the image's kernel cmdline hardcodes `ubi.mtd=rootfs` (dual-boot slot 0); if
+> the stock flasher writes OpenWrt into the *other* slot (`rootfs_1`) and boots
+> it, the kernel attaches the wrong UBI and root is not found → no boot.
+> **Only do this with UART access and a full NAND backup, and treat it as a
+> recoverable experiment — not plug-and-play.**
+
+The flow — flash from the **stock** TP-Link web interface:
 
 1. Grab the factory image from the latest [release](../../releases)
    (`re700x-v1.1-factory-webflash.bin`), or build it yourself (below).
@@ -112,8 +126,12 @@ versioned images.
 
 ## Roadmap
 
-- [x] Factory image flashable from the stock TP-Link web UI (no soldering) —
-      `re700x-factory-pack.py`, verified end-to-end on real hardware.
+- [~] Factory image flashable from the stock TP-Link web UI (no soldering) —
+      `re700x-factory-pack.py` works (one unit installed fine), **but bricked a
+      second unit** → experimental until fixed.
+- [ ] Fix the dual-boot brick: make the kernel cmdline slot-aware (stop
+      hardcoding `ubi.mtd=rootfs`) so OpenWrt boots from whichever slot the stock
+      flasher writes. Confirm the cause via #2's UART serial log.
 - [ ] Integrate the `FwUpTbl` format into `tplink-safeloader` so `make` emits a
       ready-to-flash `factory.bin` directly (instead of the separate packer).
 - [ ] WPA3 (SAE) defaults.

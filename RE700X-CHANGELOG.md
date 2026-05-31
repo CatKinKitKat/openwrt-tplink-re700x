@@ -6,9 +6,14 @@ the `squashfs-sysupgrade.bin` built from that commit. Doc-only changes
 (NOTES/CHANGELOG) do not alter the firmware image, so a tagged image's sha256
 stays valid across later documentation commits.
 
+> ⚠️ **The stock web-GUI factory install is experimental and has bricked a unit.**
+> Only flash from stock with UART access + a NAND backup. `sysupgrade`
+> (OpenWrt→OpenWrt) is safe. See `README.RE700X.md`.
+
 ## v1.3 — 2026-05-31 (tag `re700x-v1.3`)
 
-Slimmer, nicer web UI + German.
+Slimmer, nicer web UI + German. **Theme is `luci-theme-material`** (the Argon
+feed wouldn't build against this OpenWrt). Built/flashed via `sysupgrade`.
 
 - Dropped `luci-ssl` + `luci-app-firewall` + `luci-app-package-manager` (and the
   old custom theme) → `luci-light` + `luci-app-statistics` (Network / Wireless /

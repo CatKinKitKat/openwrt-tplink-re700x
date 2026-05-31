@@ -6,8 +6,15 @@
 > (acceptance) and — verified end-to-end on a real RE700X — `nvrammanager -u`
 > flashes the rootfs into the inactive dual-boot slot and the device reboots
 > into a fully-working OpenWrt 6.12.91. The full end-user path — uploading the
-> image through the **stock TP-Link web GUI** — has also been verified on real
-> hardware. See §8.
+> image through the **stock TP-Link web GUI** — worked on one real RE700X. See §8.
+>
+> ⚠️ **BUT it later bricked a second unit:** a clean stock web-GUI flash (no UART)
+> completed without error yet the device booted nothing and is recoverable only
+> via UART (this bootloader has no button/TFTP recovery). Suspected cause (pending
+> a serial log): the image cmdline hardcodes `ubi.mtd=rootfs` (slot 0); if the
+> stock flasher installs OpenWrt into the other slot and boots it, root isn't
+> found. **Treat the stock web-GUI install as experimental — UART + NAND backup
+> mandatory.** `sysupgrade` (OpenWrt→OpenWrt) is unaffected and safe.
 
 ---
 
