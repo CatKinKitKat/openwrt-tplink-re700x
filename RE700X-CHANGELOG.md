@@ -6,7 +6,28 @@ the `squashfs-sysupgrade.bin` built from that commit. Doc-only changes
 (NOTES/CHANGELOG) do not alter the firmware image, so a tagged image's sha256
 stays valid across later documentation commits.
 
-## v1.0 — 2026-05-31 (commit fff3becbe8)
+## v1.1 — 2026-05-31 (tag `re700x-v1.1`)
+
+Adds a **web-UI-flashable factory image** — install OpenWrt on a stock RE700X
+straight from the TP-Link "Firmware Upgrade" web page (no UART, no soldering).
+Firmware is the v1.0 port; this release is the install-path tooling.
+
+- sha256 (sysupgrade): `41d5366da07ef2f1a9a6019b247ef936e8bd68ae488b52687d5ebb35f9e1ad0c`
+- New tool `re700x-factory-pack.py` (+ bundled `re700x-fwdata/`) wraps the rootfs
+  UBI into the stock `nvrammanager` upload format (TP-Link safeloader + the
+  reverse-engineered `FwUpTbl` partition table). Build it with:
+  ```
+  ./re700x-factory-pack.py \
+     --os bin/targets/qualcommax/ipq50xx/openwrt-qualcommax-ipq50xx-tplink_re700x-squashfs-factory.ubi \
+     --bump-version "9.9.9 Build 20991231 Rel. 99999" -o re700x-factory.bin
+  ```
+- Format fully reverse-engineered from the stock `nvrammanager`; see
+  `RE700X-FACTORY-IMAGE-PROBLEM.md`.
+- Proven end-to-end on real hardware: `nvrammanager -c`/`-u` **and** the stock
+  web GUI flash the rootfs into the inactive dual-boot slot and reboot into
+  OpenWrt 6.12.91.
+
+## v1.0 — 2026-05-31 (commit 20fd56b47a)
 
 First fully working image: all hardware up.
 
@@ -21,7 +42,7 @@ First fully working image: all hardware up.
 - Both radios run as APs simultaneously and stay stable.
 - Carries forward everything from v0.9.
 
-## v0.9 — 2026-05-30 (commits c37478ba90, eb58f2eb83)
+## v0.9 — 2026-05-30 (commits 7f70639f7e, f15057cc87)
 
 First flashable image that boots OpenWrt from NAND.
 
