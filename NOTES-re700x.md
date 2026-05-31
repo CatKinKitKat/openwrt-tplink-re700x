@@ -18,10 +18,9 @@ dumps. The ART dump and stock backup files are local recovery inputs only.
 - Ethernet on the external port works through `lan` at 1000 Mbps full duplex.
 - `br-lan` and `lan` use the 6-byte `default-mac` from `factory_data`.
 - Default network config treats the single external port as DHCP client LAN.
-- IPQ5018 Wi-Fi is enabled for RAM-only ath11k testing. Calibration is
-  extracted from `0:art`; device-specific board-2 files are included from the
-  stock RE700X EU v1.0 rootfs boarddata. QCN6122 remains disabled because all
-  tested PD/memory-mode variants crash Q6 before QCN caldata is requested.
+- IPQ5018 Wi-Fi is enabled. Calibration is extracted from `0:art`;
+  device-specific board-2 files are included from the stock RE700X EU v1.0
+  rootfs boarddata. QCN6122 5G now works too (see "5G / QCN6122 WORKS" below).
 - No factory or sysupgrade image support is considered ready.
 
 ## Hardware
@@ -621,3 +620,60 @@ initialization" ~40s in. Worse, this crash takes down the cd00000 Q6 root PD,
 which makes the (previously working) 2.4G radio fail QMI with -110, and
 "Coldboot Calibration timed out". So the QCN6122 block is NOT the DMA pool; it
 needs the stock init/reset sequence. Left &wifi1 status=disabled; 2.4G stays up.
+
+## 5G / QCN6122 WORKS (2026-05-31) - solved by reading the stock firmware
+
+Stopped guessing and extracted the stock config to recover the two
+board-specific values that cannot be guessed. Both came from the stock NAND
+backup in `/home/eduard/tftp/re700x-stock-backup/`.
+
+### Extracting the stock DTB
+The stock `mtd11-rootfs.bin` is a UBI image with two volumes: `kernel` (static)
+and `ubi_rootfs`. The `kernel` volume is itself a FIT image; its `config@mp02.1`
+(the config the stock U-Boot selects for this board) points to `fdt@mp02.1`.
+
+    ubireader_extract_images -o out mtd11-rootfs.bin     # -> vol-kernel(.itb), vol-ubi_rootfs
+    dumpimage -T flat_dt -p 22 -o stock.dtb out/.../vol-kernel.ubifs   # image 22 = fdt@mp02.1
+    dtc -I dtb -O dts -o stock-mp02.1.dts stock.dtb
+
+`ubi_rootfs` is squashfs (magic `hsqs`), not ubifs - `unsquashfs` it to get the
+stock `/lib/firmware/boarddata`. Extracted DTS saved as
+`re700x-stock-backup/stock-mp02.1.dts`.
+
+### Fix 1: q6v5_wcss boot-args (the real blocker)
+The QCN6122 on IPQ5018 is NOT a PCIe card with its own reset/regulator/clock
+node - it boots as a protection domain (userpd2) on the shared Q6/WCSS. The
+firmware does the radio reset itself, using the GPIO named in the PIL boot-args.
+
+boot-args v1 format (per external radio, decoded from
+`patches-6.12/0815-...v1-bootargs.patch`):
+
+    <PCIE-index, length, userPD-id, reset-gpio, reserved, reserved>
+
+Firmware defaults: UPD2 = PCIE1/gpio0x12(18), UPD3 = PCIE0/gpio0x0f(15).
+Stock RE700X passes `<0x1 4 3 15 0 0  0x2 4 2 0x1b 0 0>` - i.e. for UPD2 (our
+QCN6122) it overrides the reset GPIO to **0x1b = 27** on PCIE1. Earlier attempts
+only tried gpio15/PCIE0 and gpio18/PCIE1; gpio27 was never tried and was the
+entire blocker. With the stock boot-args, pd-2 boots through, QMI completes, no
+more `err_smem_ver`/DOG watchdog, and the Q6 root PD + 2.4G radio stay up.
+
+### Fix 2: QCN6122 board-2.bin (ath11k board file)
+Once the PD booted, ath11k failed with `failed to load board data file: -12`
+because there was no `ath11k/QCN6122/hw1.0/board-2.bin`. Built
+`package/firmware/ipq-wifi/src/board-tplink_re700x.qcn6122` with ath11k-bdencoder
+from the stock `boarddata/boarddata_hw1.0/EU/bdwlan.b60` (board_id 0x60), using
+the same single variant key as the working 2.4G file:
+`bus=ahb,qmi-chip-id=0,qmi-board-id=255,variant=TP-Link-RE700X`. (The existing
+`.ipq5018` file is byte-identical to stock `bdwlan.b24`, board_id 0x24 - same
+convention.) The ipq-wifi Makefile already maps `.qcn6122` ->
+`ath11k/QCN6122/hw1.0/board-2.bin`.
+
+### Bringing up the APs
+`wifi config` generates both radios but leaves each `wifi-iface` at
+`disabled '1'`. Set the IFACES (not just the devices) to `disabled '0'`, set
+`country`, `wifi up`. Both APs come up: phy0 2.4G ch1 HE20, phy1 5G ch36 HE80,
+simultaneous and stable. The `command failed: Not supported (-95)` antenna-mask
+lines in logread are harmless (ath11k doesn't support set-antenna).
+
+Result: the RE700X port is feature-complete - NAND boot, ethernet, LEDs,
+buttons, 2.4G and 5G Wi-Fi 6 all working.
