@@ -23,21 +23,21 @@ tree; this README covers only the RE700X-specific port.
 | Boot from NAND (persistent) | ✅ |
 | Ethernet (WAN/LAN, RTL8211F) | ✅ |
 | 5 front LEDs + 2 buttons | ✅ |
-| 2.4 GHz Wi-Fi 6 (IPQ5018) | ✅ (single radio) |
-| 5 GHz Wi-Fi 6 (QCN6122) | ✅ (single radio) |
-| **Both radios at once** | ❌ OOM on 256 MB — see *Known issue: RAM* |
+| 2.4 GHz Wi-Fi 6 (IPQ5018) | ✅ |
+| 5 GHz Wi-Fi 6 (QCN6122) | ✅ |
+| Both radios simultaneously | ✅ (needs the ath11k DP-ring shrink — see *RAM note*) |
 | Web-UI-flashable factory image | ⚠️ experimental (bricked a unit) |
 
-Each radio works. Running **both radios + full default services** exhausts the
-256 MB RAM and the OOM-killer reboots the device after ~30–60 s. A single radio
-(2.4 *or* 5 GHz) is stable.
+Both radios run simultaneously and stay stable **thanks to the ath11k DP-ring-size
+patch** — ~48 MB free on the 256 MB device. Without that patch the oversized RX
+rings OOM the box (see *RAM note*).
 
-## Known issue: RAM / out-of-memory with both radios
+## RAM note: ath11k DP-ring shrink (both-radio OOM — FIXED)
 
-On this 256 MB device (~184 MB usable after firmware reservations) the mainline
-**ath11k + nss-dp** network stack alone consumes ~90–110 MB, leaving too little
-for userspace → OOM-kill reboot loop. Pinned via `/proc/allocinfo` (kernel
-`CONFIG_MEM_ALLOC_PROFILING`); the dominant consumers are:
+Both ath11k radios *used to* OOM this 256 MB device (~184 MB usable): the network
+stack consumed ~90–110 MB, leaving nothing for userspace → reboot loop. Pinned via
+`/proc/allocinfo` (kernel `CONFIG_MEM_ALLOC_PROFILING`); the dominant consumers
+were:
 
 - **`__page_frag_cache_refill` ≈ 54 MB and growing** — network-driver RX page
   fragments (nss-dp/EDMA Ethernet + ath11k RX).
@@ -48,12 +48,12 @@ for userspace → OOM-kill reboot loop. Pinned via `/proc/allocinfo` (kernel
 These live outside the normal `/proc/meminfo` counters, which is why `free`
 showed ~100 MB "missing". It is **not** a userspace/package problem and **not**
 fixed by `qcom,ath11k-fw-memory-mode` (mainline ath11k ignores that DT property).
-The real fix is reducing the EDMA/ath11k RX-buffer footprint (driver/DT) — open
-work; the `allocinfo` data above is the evidence for an upstream/community report.
-**Workaround: run a single radio.** The shipped DTS therefore disables the 5 GHz
-radio by default (`&wifi1 { status = "disabled"; }`) for a stable out-of-the-box
-2.4 GHz AP. To try both radios again, set it back to `"okay"` and rebuild (it
-will OOM until the RX-buffer footprint is fixed).
+
+**FIXED** by `patches/ath11k/952-ath11k-reduce-dp-ring-sizes-for-256MB.patch`
+(values from openwrt/openwrt#21495 / `CONFIG_ATH11K_SMALLBUFFERS`): it shrinks the
+ath11k DP rings (TX-comp 32768→2048, RXDMA-buf 4096→1024, monitor rings
+1024/4096/2048→512/128/128). Result: **both radios run with ~48 MB free** on the
+256 MB device. 5 GHz is therefore enabled by default again.
 
 ## Hardware
 
