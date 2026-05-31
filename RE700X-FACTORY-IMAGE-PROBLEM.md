@@ -10,11 +10,14 @@
 >
 > ⚠️ **BUT it later bricked a second unit:** a clean stock web-GUI flash (no UART)
 > completed without error yet the device booted nothing and is recoverable only
-> via UART (this bootloader has no button/TFTP recovery). Suspected cause (pending
-> a serial log): the image cmdline hardcodes `ubi.mtd=rootfs` (slot 0); if the
-> stock flasher installs OpenWrt into the other slot and boots it, root isn't
-> found. **Treat the stock web-GUI install as experimental — UART + NAND backup
-> mandatory.** `sysupgrade` (OpenWrt→OpenWrt) is unaffected and safe.
+> via UART (this bootloader has no button/TFTP recovery). **Confirmed cause** (via
+> #2's UART: `tp_boot_idx=1`): the stock flasher wrote OpenWrt to slot `rootfs_1`
+> and set `tp_boot_idx=1`, but the FIT cmdline hardcodes `ubi.mtd=rootfs` (slot 0,
+> `CONFIG_CMDLINE_FORCE`) → kernel attaches the wrong slot → no boot. So the flash
+> only works if the device was on stock-slot-1 pre-flash (that was #1). Recover via
+> UART (`setenv tp_boot_idx 0; saveenv`). **Fix: make the rootfs slot match the
+> booted slot (stop forcing `ubi.mtd=rootfs`).** **Treat the stock web-GUI install
+> as experimental — UART + NAND backup mandatory.** `sysupgrade` is unaffected.
 
 ---
 

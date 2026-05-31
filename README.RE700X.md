@@ -10,8 +10,11 @@ tree; this README covers only the RE700X-specific port.
 > stock web GUI bricked a second, healthy device** (clean stock, no UART) — it
 > booted nothing and is recoverable only via UART. This bootloader has **no
 > button/TFTP recovery**. **Do not flash from stock without UART access and a
-> full NAND backup.** Suspected cause under investigation (dual-boot slot /
-> `ubi.mtd=` cmdline mismatch — see §*Install from stock*).
+> full NAND backup.** **Confirmed cause** (via UART): the stock flasher can write
+> OpenWrt into dual-boot slot `rootfs_1` and set `tp_boot_idx=1`, but the FIT
+> cmdline hardcodes `ubi.mtd=rootfs` (slot 0, `CONFIG_CMDLINE_FORCE`) → kernel
+> attaches the wrong slot → no boot. Recover via UART: `setenv tp_boot_idx 0;
+> saveenv`. Fix: make the rootfs slot match the booted slot. See §*Install from stock*.
 
 ## What works
 
