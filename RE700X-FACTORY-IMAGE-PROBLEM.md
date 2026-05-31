@@ -5,8 +5,9 @@
 > produces a web-UI-flashable OpenWrt factory image. It passes `nvrammanager -c`
 > (acceptance) and — verified end-to-end on a real RE700X — `nvrammanager -u`
 > flashes the rootfs into the inactive dual-boot slot and the device reboots
-> into a fully-working OpenWrt 6.12.91. See §8. The only step not yet exercised
-> is the stock web-GUI upload front-end (same `nvrammanager -u` underneath).
+> into a fully-working OpenWrt 6.12.91. The full end-user path — uploading the
+> image through the **stock TP-Link web GUI** — has also been verified on real
+> hardware. See §8.
 
 ---
 
@@ -153,16 +154,33 @@ The earlier `ubi_rootfs`-vs-`rootfs` volume-name concern was MOOT: the OpenWrt
 FIT image carries its own bootargs (`root=/dev/ubiblock0_1`, ubiblock on the
 standard `rootfs` volume) and does not use the stock `root=mtd:ubi_rootfs` path.
 
-Notes when testing `-u` from a *live* OpenWrt (NOT issues on stock / web-GUI):
-- `ubiformat` refuses a UBI-attached target mtd → `ubidetach -m <n>` (or `-d`/`-p`) first.
-- `/tmp` is tmpfs; the uploaded image can vanish on reboot → re-fetch before `-u`.
-- `fw_setenv tp_boot_idx` needs `/etc/fw_env.config`; without it the boot-alter
-  flag stays unset and U-Boot defaults to slot 0.
+### Web-GUI path (the real end-user flow) — also verified
 
-Prereqs for the real **web-GUI** path (still to be exercised once): device on
-**stock firmware** with installed `soft_ver` ≤ the image's (use `--bump-version`
-to always pass). Risk is low — writes the inactive slot, the other slot stays as
-fallback, UART/TFTP recovery available.
+Restored stock to a slot from a full backup, booted it, and uploaded the image
+through the **stock TP-Link web GUI** ("Firmware Upgrade"). It flashed and
+rebooted into OpenWrt 6.12.91. So the end-user path (pristine stock → web GUI →
+OpenWrt) works. The web upgrade runs via the `nvram_ubus` ubus daemon (luci
+`controller/admin/firmware.lua` → `nvrammanager`); stock has no root shell, only
+U-Boot + the web GUI — exactly what an end user has.
+
+Use `--bump-version` so the image's `soft_ver` major.minor is ≥ the device's
+installed stock version (anti-downgrade).
+
+### `tp_boot_idx` / slot-attach gotcha (only when hand-restoring stock for a test)
+
+Stock's `etc/init.d/wifi_fw_mount` ubiattaches the rootfs slot selected by the
+U-Boot env `tp_boot_idx` — the WLAN/ADSP firmware lives as squashfs sub-volumes
+*inside* the rootfs UBI. If you manually boot a slot in U-Boot without setting
+`tp_boot_idx` to match, wifi_fw_mount attaches the **other** (inactive) slot,
+which is exactly the upgrade target → `ubiformat` then fails ("Fail to flash ubi
+image"). Fix before booting stock for the test: `setenv tp_boot_idx 1; saveenv`
+(for `rootfs_1`). On a genuine device `tp_boot_idx` always matches the booted
+slot, so this never happens and the web-GUI flash works out of the box.
+
+Other artifacts of testing from a *live* OpenWrt (NOT issues on stock):
+- `ubiformat` refuses a UBI-attached target mtd → `ubidetach -m <n>` first.
+- `/tmp` is tmpfs; a large file can OOM/vanish → stream (`wget -O - | nandwrite`)
+  or restore via U-Boot TFTP (`tftpboot` + `nand erase`/`nand write`).
 
 ## 9. Safety / repo policy
 
