@@ -47,7 +47,10 @@ showed ~100 MB "missing". It is **not** a userspace/package problem and **not**
 fixed by `qcom,ath11k-fw-memory-mode` (mainline ath11k ignores that DT property).
 The real fix is reducing the EDMA/ath11k RX-buffer footprint (driver/DT) — open
 work; the `allocinfo` data above is the evidence for an upstream/community report.
-**Workaround: run a single radio.**
+**Workaround: run a single radio.** The shipped DTS therefore disables the 5 GHz
+radio by default (`&wifi1 { status = "disabled"; }`) for a stable out-of-the-box
+2.4 GHz AP. To try both radios again, set it back to `"okay"` and rebuild (it
+will OOM until the RX-buffer footprint is fixed).
 
 ## Hardware
 

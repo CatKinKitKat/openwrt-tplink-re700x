@@ -321,7 +321,9 @@
 	 * GPIO 27. This combination lets the userpd finish init and keeps
 	 * both ath11k radios online.
 	 */
-	status = "okay";
+	/* 5GHz/QCN6122 disabled: both radios at once OOM the 256MB device
+	 * (see README "Known issue: RAM"). Keep 2.4GHz only for now. */
+	status = "disabled";
 
 	qcom,rproc = <&q6_wcss_pd2>;
 	qcom,userpd-subsys-name = "q6v5_wcss_userpd2";
