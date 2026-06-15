@@ -286,7 +286,14 @@ endef
 TARGET_DEVICES += zyxel_scr50axe
 
 define Device/tplink_re700x
-	$(call Device/FitImage)
+	# FitImageInitrd carries a separate-initramfs cpio inside the FIT; the
+	# initramfs preinit hook (05_re700x_slot_select) reads U-Boot env
+	# tp_boot_idx and ubiattaches the correct dual-boot slot before
+	# mount_root runs. Required to survive the stock web-GUI install when
+	# the stock flasher picks the inactive slot (rootfs_1) — without this
+	# trampoline, the kernel's forced ubi.mtd=rootfs attaches slot 0 and
+	# bricks the device.
+	$(call Device/FitImageInitrd)
 	$(call Device/UbiFit)
 	DEVICE_VENDOR := TP-Link
 	DEVICE_MODEL := RE700X

@@ -1,0 +1,85 @@
+#!/bin/sh
+# RE700X slot trampoline. Runs in the initrd (separate-initramfs FIT) before
+# mount_root. Reads U-Boot env tp_boot_idx from "0:appsblenv" and ubiattaches
+# the matching rootfs slot ("rootfs" or "rootfs_1") as ubi0, so the
+# subsequent /dev/ubiblock0_<N> root mount resolves to the right slot.
+#
+# Why this is needed: stock TP-Link U-Boot's compiled-in bootargs hardcode
+# "ubi.mtd=rootfs" regardless of which dual-boot slot it actually loaded the
+# kernel from. The stock web-GUI flasher writes OpenWrt into the *inactive*
+# slot and flips tp_boot_idx — so on units shipped on slot 0, OpenWrt lands
+# in rootfs_1 + tp_boot_idx=1 while the kernel still attaches rootfs (slot 0)
+# and fails to find root, bricking the unit.
+
+. /lib/functions.sh
+. /lib/functions/system.sh
+
+re700x_mtdnum() {
+	local dev
+	dev=$(find_mtd_chardev "$1")
+	[ -n "$dev" ] || return 1
+	# /dev/mtd11 -> 11; /dev/mtd/11 -> 11
+	echo "${dev##*[!0-9]}"
+}
+
+re700x_read_tp_boot_idx() {
+	local mtdnum="$1" val
+	# U-Boot env: 4-byte CRC32 + NUL-separated key=value pairs. Scan the
+	# whole partition (~256 KiB) to be safe against redundant-env layouts.
+	val=$(dd if="/dev/mtd${mtdnum}" 2>/dev/null \
+		| tr '\0' '\n' \
+		| awk -F= '$1=="tp_boot_idx"{print $2; exit}')
+	echo "$val"
+}
+
+re700x_slot_select() {
+	grep -q tplink,re700x /proc/device-tree/compatible 2>/dev/null || return 0
+
+	local env_mtd want want_mtd val slot=0
+
+	env_mtd=$(re700x_mtdnum "0:appsblenv") || env_mtd=
+	[ -n "$env_mtd" ] && val=$(re700x_read_tp_boot_idx "$env_mtd")
+	[ "$val" = "1" ] && slot=1
+
+	want=rootfs
+	[ "$slot" = "1" ] && want=rootfs_1
+	want_mtd=$(re700x_mtdnum "$want") || want_mtd=
+
+	if [ -z "$want_mtd" ]; then
+		echo "re700x-slot: mtd '$want' not found, leaving ubi as-is" >&2
+		return 0
+	fi
+
+	# Detach any ubi devices attached on the wrong mtd (kernel may have
+	# attached ubi0 from the forced ubi.mtd=rootfs cmdline).
+	local u u_mtd u_num
+	for u in /sys/class/ubi/ubi[0-9]*; do
+		[ -d "$u" ] || continue
+		u_mtd=$(cat "$u/mtd_num" 2>/dev/null)
+		[ "$u_mtd" = "$want_mtd" ] && continue
+		u_num=${u##*/ubi}
+		ubidetach -d "$u_num" 2>/dev/null
+	done
+
+	# Attach the right slot as ubi0 (if not already).
+	if [ ! -d /sys/class/ubi/ubi0 ]; then
+		ubiattach -m "$want_mtd" -d 0 >/dev/null 2>&1
+	fi
+
+	# Make sure rootfs/kernel volumes have block devices so mount_root and
+	# any kernel root= lookup can find them.
+	local v vol
+	for v in /sys/class/ubi/ubi0_*; do
+		[ -e "$v/name" ] || continue
+		vol=$(cat "$v/name")
+		case "$vol" in
+			rootfs|kernel)
+				ubiblock --create "/dev/${v##*/}" 2>/dev/null
+				;;
+		esac
+	done
+
+	echo "re700x-slot: slot=$slot mtd=$want_mtd vol=$want tp_boot_idx='${val:-unset}'"
+}
+
+boot_hook_add preinit_main re700x_slot_select

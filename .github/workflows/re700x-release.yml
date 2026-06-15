@@ -67,6 +67,12 @@ jobs:
           CONFIG_TARGET_qualcommax_ipq50xx=y
           CONFIG_TARGET_qualcommax_ipq50xx_DEVICE_tplink_re700x=y
           CONFIG_LUCI_LANG_de=y
+          # Initrd-in-FIT trampoline: needed so the RE700X FIT carries an
+          # initramfs that ubiattaches the right dual-boot slot before
+          # mount_root (see lib/preinit/05_re700x_slot_select).
+          CONFIG_TARGET_ROOTFS_INITRAMFS=y
+          CONFIG_TARGET_ROOTFS_INITRAMFS_SEPARATE=y
+          CONFIG_TARGET_INITRAMFS_COMPRESSION_GZIP=y
           EOF
           make defconfig
 
