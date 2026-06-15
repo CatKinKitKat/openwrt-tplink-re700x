@@ -165,6 +165,34 @@ linksys_mx_pre_upgrade() {
 	fi
 }
 
+re700x_get_boot_part() {
+	# Authoritative source for the current dual-boot slot is the U-Boot env
+	# tp_boot_idx (the 05_re700x_slot_select preinit hook reads the same env
+	# and ubiattaches the matching mtd as ubi0). /proc/cmdline is NOT used —
+	# the kernel-FORCEd ubi.mtd=rootfs would otherwise hide slot-1 boots.
+	local v
+	v=$(/usr/sbin/fw_printenv -n tp_boot_idx 2>/dev/null)
+	case "$v" in
+		1) echo rootfs_1 ;;
+		*) echo rootfs   ;;
+	esac
+}
+
+re700x_do_upgrade() {
+	local new_idx
+	case "$(re700x_get_boot_part)" in
+		rootfs)   CI_UBIPART="rootfs_1"; new_idx=1 ;;
+		rootfs_1) CI_UBIPART="rootfs";   new_idx=0 ;;
+	esac
+
+	fw_setenv -s - <<-EOF
+		tp_boot_idx $new_idx
+	EOF
+
+	remove_oem_ubi_volume ubi_rootfs
+	nand_do_upgrade "$1"
+}
+
 platform_check_image() {
 	return 0;
 }
@@ -232,9 +260,7 @@ platform_do_upgrade() {
 		nand_do_upgrade "$1"
 		;;
 	tplink,re700x)
-		CI_UBIPART="rootfs"
-		remove_oem_ubi_volume ubi_rootfs
-		nand_do_upgrade "$1"
+		re700x_do_upgrade "$1"
 		;;
 	yuncore,ax830|\
 	yuncore,ax850|\
