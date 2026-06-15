@@ -4,17 +4,20 @@ A work-in-progress OpenWrt port for the **TP-Link RE700X** Wi-Fi 6 range
 extender (EU v1.0), based on the `qualcommax` target. Built on a full OpenWrt
 tree; this README covers only the RE700X-specific port.
 
-> ⚠️ **Status: working — but the stock web-GUI install is EXPERIMENTAL and has
-> bricked a unit.** Once OpenWrt is installed it runs great, and `sysupgrade`
-> (OpenWrt→OpenWrt) is safe and repeatable. **But the *initial* flash from the
-> stock web GUI bricked a second, healthy device** (clean stock, no UART) — it
-> booted nothing and is recoverable only via UART. This bootloader has **no
-> button/TFTP recovery**. **Do not flash from stock without UART access and a
-> full NAND backup.** **Confirmed cause** (via UART): the stock flasher can write
-> OpenWrt into dual-boot slot `rootfs_1` and set `tp_boot_idx=1`, but the FIT
-> cmdline hardcodes `ubi.mtd=rootfs` (slot 0, `CONFIG_CMDLINE_FORCE`) → kernel
-> attaches the wrong slot → no boot. Recover via UART: `setenv tp_boot_idx 0;
-> saveenv`. Fix: make the rootfs slot match the booted slot. See §*Install from stock*.
+> ⚠️ **Status: working — stock web-GUI install is EXPERIMENTAL, brick fix
+> landed in code but NOT YET hardware-validated.** Once OpenWrt is installed it
+> runs great. `sysupgrade` (OpenWrt→OpenWrt) is safe and is now a true A/B
+> toggle (writes the inactive slot, flips `tp_boot_idx`). The previous brick
+> on initial stock-web-GUI flash had a **confirmed cause** (via UART): stock
+> writes OpenWrt to dual-boot slot `rootfs_1` and sets `tp_boot_idx=1`, but
+> the kernel cmdline hardcodes `ubi.mtd=rootfs` (slot 0, `CONFIG_CMDLINE_FORCE`)
+> → kernel attaches the wrong slot → no boot. **Fix landed:** a separate-initrd
+> in the FIT carries a preinit hook (`05_re700x_slot_select`) that reads
+> `tp_boot_idx` directly from `0:appsblenv` and re-attaches the right slot as
+> `ubi0` before `mount_root`. See §*Dual-boot trampoline (brick fix)*.
+> **Until this fix is validated on a real unit**, treat the stock web-GUI
+> install the same way as before: UART + NAND backup mandatory.
+> Recover-from-brick remains UART-only: `setenv tp_boot_idx 0; saveenv`.
 
 ## What works
 
@@ -153,14 +156,50 @@ firmware, were needed:
 See `NOTES-re700x.md` for the full bring-up log and `RE700X-CHANGELOG.md` for
 versioned images.
 
+## Dual-boot trampoline (brick fix)
+
+The kernel cmdline can't express which dual-boot slot to attach: stock TP-Link
+U-Boot 2016.01 has a compiled-in `bootcmd` that hardcodes `ubi.mtd=rootfs`
+regardless of which slot it actually loaded the kernel from, and OpenWrt's
+qualcommax target sets `CONFIG_CMDLINE_FORCE=y` over the top. So if the stock
+web-GUI flasher writes OpenWrt into `rootfs_1` and flips `tp_boot_idx=1`, the
+kernel still attaches slot 0 → no root → brick.
+
+**Fix:** the RE700X FIT now carries a separate-initramfs cpio
+(`Device/FitImageInitrd` + `CONFIG_TARGET_ROOTFS_INITRAMFS_SEPARATE=y`). Inside
+that initrd, the preinit hook
+`target/linux/qualcommax/ipq50xx/base-files/lib/preinit/05_re700x_slot_select`
+runs before `mount_root`:
+
+1. Reads `tp_boot_idx` directly from `0:appsblenv` (`dd | tr '\0' '\n' | awk`).
+2. Detaches any wrong-slot UBI the kernel auto-attached via the forced cmdline.
+3. `ubiattach`es the right slot (`rootfs` or `rootfs_1`) as `ubi0` and
+   registers `ubiblock` devices.
+4. Normal `mount_root` then mounts `/dev/ubiblock0_N` from the correct slot.
+
+The hook is guarded by the `tplink,re700x` compatible — other ipq50xx devices
+in the same kernel build are unaffected.
+
+`sysupgrade` was changed in lockstep (`re700x_do_upgrade` in the ipq50xx
+`platform.sh`): it now reads `tp_boot_idx` via `fw_printenv`, writes the
+*inactive* slot, and flips `tp_boot_idx`. Result: true A/B with rollback —
+a botched upgrade is recoverable from a still-running OpenWrt with
+`fw_setenv tp_boot_idx <previous>` + reboot, no UART required.
+
+Status: **landed in code, not yet validated on hardware.** Validation order:
+RAM-boot the new `*-initramfs-uImage.itb` and confirm the `re700x-slot:` line
+on the console → sysupgrade the working unit (will toggle to slot 1) →
+sysupgrade again (toggle back to slot 0). Only after that should the
+EXPERIMENTAL warning come off.
+
 ## Roadmap
 
 - [~] Factory image flashable from the stock TP-Link web UI (no soldering) —
       `re700x-factory-pack.py` works (one unit installed fine), **but bricked a
-      second unit** → experimental until fixed.
-- [ ] Fix the dual-boot brick: make the kernel cmdline slot-aware (stop
-      hardcoding `ubi.mtd=rootfs`) so OpenWrt boots from whichever slot the stock
-      flasher writes. Confirm the cause via #2's UART serial log.
+      second unit**. Fix landed in code (see §*Dual-boot trampoline*),
+      experimental until validated on hardware.
+- [~] Fix the dual-boot brick: initrd trampoline + A/B sysupgrade landed
+      (commits `e20897b6`..`af3ae5f8`). Awaiting on-hardware validation.
 - [ ] Integrate the `FwUpTbl` format into `tplink-safeloader` so `make` emits a
       ready-to-flash `factory.bin` directly (instead of the separate packer).
 - [ ] WPA3 (SAE) defaults.

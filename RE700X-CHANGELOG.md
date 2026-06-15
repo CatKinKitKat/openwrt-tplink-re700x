@@ -10,6 +10,40 @@ stays valid across later documentation commits.
 > Only flash from stock with UART access + a NAND backup. `sysupgrade`
 > (OpenWrt→OpenWrt) is safe. See `README.RE700X.md`.
 
+## v1.5 — unreleased
+
+**Dual-boot brick fix (in code, NOT yet validated on hardware).** Adds an
+initrd-in-FIT trampoline so the kernel cmdline no longer has to know which
+dual-boot slot is active. Removes the need for "lucky slot at first install".
+
+- **Initrd trampoline.** `Device/tplink_re700x` now builds via the new
+  `Device/FitImageInitrd` (adds `with-initrd` to the `fit` build pipeline);
+  CI enables `CONFIG_TARGET_ROOTFS_INITRAMFS{,_SEPARATE}=y` so the FIT
+  actually carries a separate-initramfs cpio. New preinit hook
+  `target/linux/qualcommax/ipq50xx/base-files/lib/preinit/05_re700x_slot_select`
+  runs in that initrd before `mount_root`: reads `tp_boot_idx` directly from
+  `0:appsblenv`, detaches any wrong-slot UBI the kernel auto-attached, and
+  `ubiattach`es the right slot as `ubi0`. Guarded by the `tplink,re700x`
+  compatible — other ipq50xx devices in the same kernel build are unaffected.
+- **Sysupgrade A/B toggle.** `re700x_do_upgrade` in `ipq50xx/.../platform.sh`
+  reads `tp_boot_idx` via `fw_printenv`, writes the *inactive* slot, and flips
+  `tp_boot_idx`. Replaces the previous always-slot-0 behaviour. Recovery from
+  a botched upgrade: `fw_setenv tp_boot_idx <previous>` + reboot, no UART.
+- **uboot-envtools wiring.** Added `tplink,re700x` to
+  `package/boot/uboot-tools/uboot-envtools/files/qualcommax_ipq50xx`
+  (`0:appsblenv 0x0 0x40000 0x20000`). Without this `fw_printenv`/`fw_setenv`
+  silently fail and the entire fix is non-functional.
+- **CI.** `.github/workflows/re700x-release.yml` injects
+  `CONFIG_TARGET_ROOTFS_INITRAMFS{,_SEPARATE}=y` + GZIP compression so the
+  release build produces the FIT-with-initrd.
+- Commits: `e20897b6`..`af3ae5f8` (4 commits).
+- sha256 (sysupgrade): TBD — pinned only after on-hardware validation.
+
+Until validated on real hardware, the README's EXPERIMENTAL warning for the
+stock web-GUI install stays. `sysupgrade` (OpenWrt→OpenWrt) is the safest
+test surface: write the new image to the working unit, A/B-toggle into
+slot 1, validate, A/B-toggle back.
+
 ## v1.4 — 2026-05-31 (tag `re700x-v1.4`)
 
 **Both Wi-Fi radios stable at once** — the OOM fix.
